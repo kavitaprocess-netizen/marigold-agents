@@ -1,0 +1,473 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Marigold Weddings — AI Agents</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,500;1,400;1,500&display=swap" rel="stylesheet">
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --g:#F7D44C;--gd:#C8A820;--gk:#9A7E10;--deep:#3C3010;
+  --cream:#FDFAF0;--warm:#F5F0E8;--muted:#9A8A6A;--bdr:#E0D4B0;--tx:#2A2010;
+}
+html,body{min-height:100vh;background:var(--cream);color:var(--tx);font-family:'Playfair Display',Georgia,serif;font-size:15px;line-height:1.7}
+
+.wrap{border-bottom:1px solid var(--bdr);padding:16px 24px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;background:var(--cream);z-index:10}
+.brand{display:flex;align-items:center;gap:10px}
+.bname{font-size:12px;letter-spacing:3px;color:var(--deep);font-style:italic}
+.step-dots{display:flex;gap:5px;align-items:center}
+.dot{width:5px;height:5px;border-radius:50%;background:var(--bdr);transition:all .3s}
+.dot.done{background:var(--gd)}
+.dot.now{background:var(--deep);width:7px;height:7px}
+
+.tabs{display:flex;border-bottom:1px solid var(--bdr);padding:0 24px;overflow-x:auto;background:var(--cream)}
+.tab{padding:10px 0;margin-right:24px;font-size:11px;letter-spacing:1.5px;color:var(--muted);cursor:pointer;border:none;border-bottom:2px solid transparent;background:transparent;font-family:'Playfair Display',Georgia,serif;transition:all .2s;white-space:nowrap;flex-shrink:0}
+.tab:hover{color:var(--deep)}
+.tab.on{color:var(--deep);border-bottom-color:var(--deep)}
+
+.body{padding:40px 24px;max-width:600px;margin:0 auto}
+.screen{display:none}
+.screen.on{display:block}
+
+.ctx{background:var(--warm);border-radius:8px;padding:11px 16px;margin-bottom:32px;display:flex;align-items:center;gap:8px;flex-wrap:wrap;font-size:12px;color:var(--deep);font-style:italic;line-height:1.5}
+.ctx-edit{margin-left:auto;font-size:10px;letter-spacing:1px;color:var(--muted);cursor:pointer;background:none;border:none;font-family:'Playfair Display',Georgia,serif;text-decoration:underline;flex-shrink:0}
+
+.ql{font-size:10px;letter-spacing:2px;text-transform:uppercase;color:var(--muted);margin-bottom:8px}
+.qt{font-size:24px;line-height:1.3;color:var(--deep);font-style:italic;font-weight:400;margin-bottom:6px}
+.qs{font-size:13px;color:var(--muted);margin-bottom:18px;font-style:normal}
+.qb{margin-bottom:32px}
+
+.pg{display:flex;flex-wrap:wrap;gap:7px}
+.p{padding:8px 16px;border-radius:100px;border:1px solid var(--bdr);font-size:13px;color:var(--tx);cursor:pointer;background:#fff;font-family:'Playfair Display',Georgia,serif;font-style:italic;transition:all .18s}
+.p:hover{border-color:var(--gd);background:var(--warm)}
+.p.on{border-color:var(--deep);background:var(--deep);color:var(--cream)}
+
+.row2{display:grid;grid-template-columns:1fr 1fr;gap:20px}
+.fl{font-size:10px;letter-spacing:1.5px;text-transform:uppercase;color:var(--muted);margin-bottom:7px}
+.fi{width:100%;border:none;border-bottom:1px solid var(--bdr);padding:8px 0;font-size:15px;font-family:'Playfair Display',Georgia,serif;font-style:italic;color:var(--tx);background:transparent;outline:none;transition:border-color .2s}
+.fi:focus{border-bottom-color:var(--deep)}
+.fi::placeholder{color:var(--bdr)}
+textarea.fi{border:1px solid var(--bdr);border-radius:8px;padding:10px 12px;resize:vertical;min-height:72px;font-size:13px}
+
+.cta{display:inline-flex;align-items:center;gap:10px;padding:13px 28px;background:var(--deep);color:var(--cream);border:none;border-radius:100px;font-size:12px;letter-spacing:2px;cursor:pointer;font-family:'Playfair Display',Georgia,serif;font-style:italic;transition:background .2s;margin-top:4px}
+.cta:hover{background:var(--gk)}
+.cta:disabled{opacity:.4;cursor:not-allowed}
+.arr{font-size:17px;display:inline-block;transition:transform .2s}
+.cta:hover .arr{transform:translateX(4px)}
+
+.out{margin-top:36px;padding-top:32px;border-top:1px solid var(--bdr);display:none}
+.out-ey{font-size:10px;letter-spacing:2px;text-transform:uppercase;color:var(--muted);margin-bottom:14px;display:flex;align-items:center;gap:8px}
+.out-ey::after{content:'';flex:1;height:1px;background:var(--bdr)}
+.out-body{font-size:14px;line-height:1.85;color:var(--tx);white-space:pre-wrap;font-family:Georgia,serif}
+.out-body.spin{color:var(--muted);font-style:italic;animation:pulse 1.6s ease-in-out infinite}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.25}}
+
+.err{background:var(--warm);border-radius:8px;padding:14px 18px;font-size:13px;color:var(--muted);font-style:italic;line-height:1.7;margin-top:12px}
+
+@media(max-width:600px){.row2{grid-template-columns:1fr}.body{padding:28px 16px}}
+</style>
+</head>
+<body>
+
+<div class="wrap">
+  <div class="brand">
+    <svg width="26" height="26" viewBox="0 0 34 34" xmlns="http://www.w3.org/2000/svg">
+      <ellipse cx="17" cy="5.5" rx="2.1" ry="4.6" fill="#F7D44C" transform="rotate(0 17 17)"/>
+      <ellipse cx="17" cy="5.5" rx="2.1" ry="4.6" fill="#F7D44C" transform="rotate(30 17 17)"/>
+      <ellipse cx="17" cy="5.5" rx="2.1" ry="4.6" fill="#F7D44C" transform="rotate(60 17 17)"/>
+      <ellipse cx="17" cy="5.5" rx="2.1" ry="4.6" fill="#F7D44C" transform="rotate(90 17 17)"/>
+      <ellipse cx="17" cy="5.5" rx="2.1" ry="4.6" fill="#F7D44C" transform="rotate(120 17 17)"/>
+      <ellipse cx="17" cy="5.5" rx="2.1" ry="4.6" fill="#F7D44C" transform="rotate(150 17 17)"/>
+      <ellipse cx="17" cy="5.5" rx="2.1" ry="4.6" fill="#F7D44C" transform="rotate(180 17 17)"/>
+      <ellipse cx="17" cy="5.5" rx="2.1" ry="4.6" fill="#F7D44C" transform="rotate(210 17 17)"/>
+      <ellipse cx="17" cy="5.5" rx="2.1" ry="4.6" fill="#F7D44C" transform="rotate(240 17 17)"/>
+      <ellipse cx="17" cy="5.5" rx="2.1" ry="4.6" fill="#F7D44C" transform="rotate(270 17 17)"/>
+      <ellipse cx="17" cy="5.5" rx="2.1" ry="4.6" fill="#F7D44C" transform="rotate(300 17 17)"/>
+      <ellipse cx="17" cy="5.5" rx="2.1" ry="4.6" fill="#F7D44C" transform="rotate(330 17 17)"/>
+      <ellipse cx="17" cy="8.3" rx="1.5" ry="3.0" fill="#C8A820" transform="rotate(15 17 17)"/>
+      <ellipse cx="17" cy="8.3" rx="1.5" ry="3.0" fill="#C8A820" transform="rotate(45 17 17)"/>
+      <ellipse cx="17" cy="8.3" rx="1.5" ry="3.0" fill="#C8A820" transform="rotate(75 17 17)"/>
+      <ellipse cx="17" cy="8.3" rx="1.5" ry="3.0" fill="#C8A820" transform="rotate(105 17 17)"/>
+      <ellipse cx="17" cy="8.3" rx="1.5" ry="3.0" fill="#C8A820" transform="rotate(135 17 17)"/>
+      <ellipse cx="17" cy="8.3" rx="1.5" ry="3.0" fill="#C8A820" transform="rotate(165 17 17)"/>
+      <ellipse cx="17" cy="8.3" rx="1.5" ry="3.0" fill="#C8A820" transform="rotate(195 17 17)"/>
+      <ellipse cx="17" cy="8.3" rx="1.5" ry="3.0" fill="#C8A820" transform="rotate(225 17 17)"/>
+      <ellipse cx="17" cy="8.3" rx="1.5" ry="3.0" fill="#C8A820" transform="rotate(255 17 17)"/>
+      <ellipse cx="17" cy="8.3" rx="1.5" ry="3.0" fill="#C8A820" transform="rotate(285 17 17)"/>
+      <ellipse cx="17" cy="8.3" rx="1.5" ry="3.0" fill="#C8A820" transform="rotate(315 17 17)"/>
+      <ellipse cx="17" cy="8.3" rx="1.5" ry="3.0" fill="#C8A820" transform="rotate(345 17 17)"/>
+      <circle cx="17" cy="17" r="4.4" fill="#9A7E10"/>
+      <circle cx="17" cy="17" r="2.6" fill="#C8A820"/>
+    </svg>
+    <span class="bname">marigold</span>
+  </div>
+  <div class="step-dots">
+    <div class="dot now" id="d0"></div>
+    <div class="dot" id="d1"></div>
+    <div class="dot" id="d2"></div>
+    <div class="dot" id="d3"></div>
+  </div>
+</div>
+
+<div class="tabs">
+  <button class="tab on"  onclick="sw('setup',0,this)">Your details</button>
+  <button class="tab"     onclick="sw('cie',1,this)">Your plan</button>
+  <button class="tab"     onclick="sw('vendor',2,this)">Find vendors</button>
+  <button class="tab"     onclick="sw('inquiry',3,this)">Message a vendor</button>
+  <button class="tab"     onclick="sw('guest',4,this)">Guest messages</button>
+</div>
+
+<div class="body">
+
+  <!-- SETUP -->
+  <div class="screen on" id="s-setup">
+    <div class="qb">
+      <div class="ql">Begin here</div>
+      <div class="qt">Tell us about yourselves.</div>
+      <div class="row2" style="margin-top:16px">
+        <div><div class="fl">Partner one</div><input class="fi" id="p1" value="Rachel" placeholder="First name"></div>
+        <div><div class="fl">Partner two</div><input class="fi" id="p2" value="Arjun" placeholder="First name"></div>
+      </div>
+    </div>
+    <div class="qb">
+      <div class="qt">Which traditions are you celebrating?</div>
+      <div class="qs">Select up to two — we blend them thoughtfully.</div>
+      <div class="pg" id="pg-trad">
+        <button class="p on" data-v="Hindu (North Indian / Punjabi)">Hindu</button>
+        <button class="p on" data-v="Jewish (Reform / Conservative)">Jewish</button>
+        <button class="p" data-v="Muslim (Nikah)">Muslim</button>
+        <button class="p" data-v="Nigerian (Yoruba)">Nigerian Yoruba</button>
+        <button class="p" data-v="Nigerian (Igbo)">Nigerian Igbo</button>
+        <button class="p" data-v="Sikh">Sikh</button>
+        <button class="p" data-v="Western / Civil">Western / Civil</button>
+        <button class="p" data-v="Chinese / Taiwanese">Chinese</button>
+      </div>
+    </div>
+    <div class="qb">
+      <div class="qt">How many guests?</div>
+      <div class="pg" id="pg-size">
+        <button class="p" data-v="Micro (under 20 guests)">Under 20 — just us</button>
+        <button class="p" data-v="Intimate (20–75 guests)">20–75 — close family</button>
+        <button class="p on" data-v="Mid-size (75–200 guests)">75–200</button>
+        <button class="p" data-v="Large (200–500 guests)">200–500</button>
+        <button class="p" data-v="Grand (500+ guests)">500+</button>
+      </div>
+    </div>
+    <div class="qb">
+      <div class="qt">Where?</div>
+      <div class="pg" id="pg-loc">
+        <button class="p on" data-v="New York / New Jersey">New York</button>
+        <button class="p" data-v="Chicago">Chicago</button>
+        <button class="p" data-v="Los Angeles">Los Angeles</button>
+        <button class="p" data-v="Destination — Italy">Italy</button>
+        <button class="p" data-v="Destination — India">India</button>
+        <button class="p" data-v="Destination — Nigeria">Nigeria</button>
+        <button class="p" data-v="Destination — Morocco">Morocco</button>
+        <button class="p" data-v="Destination — Bali">Bali</button>
+        <button class="p" data-v="Destination — Israel">Israel</button>
+      </div>
+    </div>
+    <div class="row2 qb">
+      <div>
+        <div class="qt" style="font-size:18px;margin-bottom:12px">Budget</div>
+        <div class="pg" id="pg-bud" style="flex-direction:column;gap:5px">
+          <button class="p" data-v="under $25,000" style="text-align:left;border-radius:8px">Under $25,000</button>
+          <button class="p" data-v="$25,000–$50,000" style="text-align:left;border-radius:8px">$25,000–$50,000</button>
+          <button class="p on" data-v="$50,000–$100,000" style="text-align:left;border-radius:8px">$50,000–$100,000</button>
+          <button class="p" data-v="$100,000–$200,000" style="text-align:left;border-radius:8px">$100,000–$200,000</button>
+          <button class="p" data-v="$200,000+" style="text-align:left;border-radius:8px">$200,000+</button>
+        </div>
+      </div>
+      <div>
+        <div class="qt" style="font-size:18px;margin-bottom:12px">When</div>
+        <div class="fl">Wedding date</div>
+        <input class="fi" id="wdate" value="June 2026" style="margin-bottom:20px">
+        <div class="qt" style="font-size:18px;margin-bottom:12px">Observance</div>
+        <div class="pg" id="pg-obs" style="flex-direction:column;gap:5px">
+          <button class="p" data-v="cultural / secular" style="text-align:left;border-radius:8px">Cultural / secular</button>
+          <button class="p on" data-v="moderately observant" style="text-align:left;border-radius:8px">Moderately observant</button>
+          <button class="p" data-v="strictly observant" style="text-align:left;border-radius:8px">Strictly observant</button>
+        </div>
+      </div>
+    </div>
+    <button class="cta" onclick="save()">Begin planning <span class="arr">→</span></button>
+  </div>
+
+  <!-- CIE -->
+  <div class="screen" id="s-cie">
+    <div class="ctx" id="ctx-cie"></div>
+    <div class="qb">
+      <div class="ql">Agent one · your plan</div>
+      <div class="qt">What would you like to focus on?</div>
+      <div class="pg" id="pg-cfocus">
+        <button class="p on" data-v="full plan — ceremonies, checklist, budget, vendor priorities, conflict flags">Everything</button>
+        <button class="p" data-v="immediate priorities — next 3 months only">Next 3 months</button>
+        <button class="p" data-v="budget breakdown by category">Budget</button>
+        <button class="p" data-v="ceremony sequence and event order">Ceremony sequence</button>
+        <button class="p" data-v="interfaith conflict flags and decisions to make together">Conflict flags</button>
+        <button class="p" data-v="which vendors to book first and why">Vendor priorities</button>
+      </div>
+    </div>
+    <button class="cta" id="cie-btn" onclick="runCIE()">Generate my plan <span class="arr">→</span></button>
+    <div class="out" id="cie-out"><div class="out-ey">Your personalised plan</div><div class="out-body" id="cie-res"></div></div>
+  </div>
+
+  <!-- VENDOR -->
+  <div class="screen" id="s-vendor">
+    <div class="ctx" id="ctx-vendor"></div>
+    <div class="qb">
+      <div class="ql">Agent two · find vendors</div>
+      <div class="qt">Who are you looking for?</div>
+      <div class="pg" id="pg-vcat">
+        <button class="p on" data-v="mehndi / henna artist">Mehndi artist</button>
+        <button class="p" data-v="multi-faith officiant">Multi-faith officiant</button>
+        <button class="p" data-v="South Asian wedding photographer">South Asian photographer</button>
+        <button class="p" data-v="kosher-certified caterer">Kosher caterer</button>
+        <button class="p" data-v="South Asian vegetarian caterer">South Asian caterer</button>
+        <button class="p" data-v="Nigerian Yoruba caterer">Nigerian caterer</button>
+        <button class="p" data-v="dhol player for baraat">Dhol player</button>
+        <button class="p" data-v="were — Yoruba praise singer">Were</button>
+        <button class="p" data-v="South Asian florist — marigolds and jasmine">South Asian florist</button>
+        <button class="p" data-v="Jewish chuppah florist">Chuppah florist</button>
+        <button class="p" data-v="gele tyer">Gele tyer</button>
+        <button class="p" data-v="South Asian bridal hair and makeup">Hair &amp; makeup</button>
+      </div>
+    </div>
+    <div class="qb">
+      <div class="qt">Budget for this vendor?</div>
+      <div class="pg" id="pg-vbud">
+        <button class="p" data-v="under $500">Under $500</button>
+        <button class="p on" data-v="$500–$1,500">$500–$1,500</button>
+        <button class="p" data-v="$1,500–$3,500">$1,500–$3,500</button>
+        <button class="p" data-v="$3,500–$8,000">$3,500–$8,000</button>
+        <button class="p" data-v="$8,000+">$8,000+</button>
+      </div>
+    </div>
+    <div class="qb">
+      <div class="fl">Event date for this vendor</div>
+      <input class="fi" id="vdate" value="June 12, 2026" style="max-width:220px">
+    </div>
+    <button class="cta" id="vm-btn" onclick="runVendor()">Find vendors <span class="arr">→</span></button>
+    <div class="out" id="vm-out"><div class="out-ey">Vendor recommendations</div><div class="out-body" id="vm-res"></div></div>
+  </div>
+
+  <!-- INQUIRY -->
+  <div class="screen" id="s-inquiry">
+    <div class="ctx" id="ctx-inquiry"></div>
+    <div class="qb">
+      <div class="ql">Agent three · message a vendor</div>
+      <div class="qt">Who are you reaching out to?</div>
+      <div class="row2">
+        <div><div class="fl">Vendor name</div><input class="fi" id="iv" value="Nisha Sharma — Mehndisha"></div>
+        <div>
+          <div class="fl">What they do</div>
+          <div class="pg" id="pg-icat" style="flex-direction:column;gap:5px;margin-top:0">
+            <button class="p on" data-v="mehndi / henna artist" style="border-radius:8px;text-align:left">Mehndi</button>
+            <button class="p" data-v="multi-faith officiant" style="border-radius:8px;text-align:left">Officiant</button>
+            <button class="p" data-v="photographer" style="border-radius:8px;text-align:left">Photographer</button>
+            <button class="p" data-v="kosher-certified caterer" style="border-radius:8px;text-align:left">Kosher caterer</button>
+            <button class="p" data-v="halal-certified caterer" style="border-radius:8px;text-align:left">Halal caterer</button>
+            <button class="p" data-v="South Asian caterer" style="border-radius:8px;text-align:left">South Asian caterer</button>
+            <button class="p" data-v="Nigerian caterer" style="border-radius:8px;text-align:left">Nigerian caterer</button>
+            <button class="p" data-v="florist" style="border-radius:8px;text-align:left">Florist</button>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="qb">
+      <div class="qt">Tell us about the event.</div>
+      <div class="row2" style="margin-top:12px">
+        <div><div class="fl">Event</div><input class="fi" id="iev" value="Mehndi night"></div>
+        <div><div class="fl">Date</div><input class="fi" id="iedate" value="June 12, 2026"></div>
+        <div><div class="fl">Guest count</div><input class="fi" id="iguests" value="80 guests"></div>
+        <div><div class="fl">Your budget</div><input class="fi" id="ibud" value="$800–$1,500"></div>
+      </div>
+    </div>
+    <div class="qb">
+      <div class="qt">Any dietary requirements?</div>
+      <div class="pg" id="pg-idiet">
+        <button class="p on" data-v="no dietary restrictions">None</button>
+        <button class="p" data-v="kosher-certified">Kosher</button>
+        <button class="p" data-v="halal-certified">Halal</button>
+        <button class="p" data-v="vegetarian">Vegetarian</button>
+      </div>
+    </div>
+    <button class="cta" id="inq-btn" onclick="runInquiry()">Draft my message <span class="arr">→</span></button>
+    <div class="out" id="inq-out"><div class="out-ey">Your draft — review before sending</div><div class="out-body" id="inq-res"></div></div>
+  </div>
+
+  <!-- GUEST -->
+  <div class="screen" id="s-guest">
+    <div class="ctx" id="ctx-guest"></div>
+    <div class="qb">
+      <div class="ql">Agent four · guest messages</div>
+      <div class="qt">What would you like to send?</div>
+      <div class="pg" id="pg-gtype">
+        <button class="p on" data-v="RSVP reminder">RSVP reminder</button>
+        <button class="p" data-v="ceremony guide — what to expect at both ceremonies">Ceremony guide</button>
+        <button class="p" data-v="dress code for all events">Dress code</button>
+        <button class="p" data-v="travel and accommodation information">Travel info</button>
+        <button class="p" data-v="mehndi night invitation and what to expect">Mehndi invitation</button>
+        <button class="p" data-v="day-of schedule for all events">Day-of schedule</button>
+        <button class="p" data-v="post-wedding thank you">Thank you</button>
+      </div>
+    </div>
+    <div class="qb">
+      <div class="qt">Who is this for?</div>
+      <div class="pg" id="pg-gaud">
+        <button class="p on" data-v="all guests — mixed cultural backgrounds">All guests</button>
+        <button class="p" data-v="guests from the Jewish side unfamiliar with Hindu traditions">Jewish side — new to Hindu</button>
+        <button class="p" data-v="guests from the Hindu side unfamiliar with Jewish traditions">Hindu side — new to Jewish</button>
+        <button class="p" data-v="international guests travelling from abroad">International guests</button>
+        <button class="p" data-v="close friends — keep it warm and informal">Close friends</button>
+      </div>
+    </div>
+    <div class="qb">
+      <div class="qt">Tone?</div>
+      <div class="pg" id="pg-gtone">
+        <button class="p on" data-v="warm and personal">Warm and personal</button>
+        <button class="p" data-v="formal and elegant">Formal</button>
+        <button class="p" data-v="casual and fun">Casual</button>
+      </div>
+    </div>
+    <div class="qb">
+      <div class="fl">Anything special to include?</div>
+      <textarea class="fi" id="gnotes" rows="3">Some guests have never attended a Hindu ceremony. Please explain the pheras gently — the sacred fire, the seven circles, removing shoes.</textarea>
+    </div>
+    <button class="cta" id="gc-btn" onclick="runGuest()">Draft message <span class="arr">→</span></button>
+    <div class="out" id="gc-out"><div class="out-ey">Your draft — review before sending</div><div class="out-body" id="gc-res"></div></div>
+  </div>
+
+</div>
+
+<script>
+const W={p1:'Rachel',p2:'Arjun',tr:['Hindu (North Indian / Punjabi)','Jewish (Reform / Conservative)'],sz:'Mid-size (75–200 guests)',loc:'New York / New Jersey',bud:'$50,000–$100,000',dt:'June 2026',obs:'moderately observant',ready:false};
+
+function initPg(id,multi){
+  document.querySelectorAll('#'+id+' .p').forEach(b=>{
+    b.addEventListener('click',()=>{
+      if(!multi){
+        document.querySelectorAll('#'+id+' .p').forEach(x=>x.classList.remove('on'));
+        b.classList.add('on');
+      } else {
+        b.classList.toggle('on');
+        if([...document.querySelectorAll('#'+id+' .p.on')].length>2) b.classList.remove('on');
+      }
+    });
+  });
+}
+
+['pg-trad','pg-size','pg-loc','pg-bud','pg-obs','pg-cfocus','pg-vcat','pg-vbud','pg-icat','pg-idiet','pg-gtype','pg-gaud','pg-gtone'].forEach((id,i)=>initPg(id,i===0));
+
+function pv(id){return[...document.querySelectorAll('#'+id+' .p.on')].map(b=>b.dataset.v)}
+function p1(id){return pv(id)[0]||''}
+
+function setDots(i){
+  [0,1,2,3].forEach(j=>{
+    const d=document.getElementById('d'+j);
+    d.className='dot';
+    if(j<i)d.classList.add('done');
+    if(j===i)d.classList.add('now');
+  });
+}
+
+function sw(id,di,tab){
+  if(!W.ready&&id!=='setup')return;
+  ['setup','cie','vendor','inquiry','guest'].forEach(x=>{
+    const el=document.getElementById('s-'+x);
+    if(el){el.style.display='none';el.classList.remove('on')}
+  });
+  const el=document.getElementById('s-'+id);
+  if(el){el.style.display='block';el.classList.add('on')}
+  document.querySelectorAll('.tab').forEach(t=>t.classList.remove('on'));
+  if(tab)tab.classList.add('on');
+  setDots(di);
+  syncCtx();
+  window.scrollTo(0,0);
+}
+
+function syncCtx(){
+  const sum=W.p1+' & '+W.p2+' \u00b7 '+W.tr.join(' + ')+' \u00b7 '+W.sz.split('(')[0].trim()+' \u00b7 '+W.loc.replace('Destination \u2014 ','')+' \u00b7 '+W.dt;
+  ['cie','vendor','inquiry','guest'].forEach(id=>{
+    const el=document.getElementById('ctx-'+id);
+    if(!el)return;
+    el.innerHTML=sum+'<button class="ctx-edit" onclick="sw(\'setup\',0,document.querySelector(\'.tab\'))">edit</button>';
+  });
+}
+
+function save(){
+  W.p1=document.getElementById('p1').value||'Partner 1';
+  W.p2=document.getElementById('p2').value||'Partner 2';
+  W.tr=pv('pg-trad');
+  W.sz=p1('pg-size');
+  W.loc=p1('pg-loc');
+  W.bud=p1('pg-bud');
+  W.dt=document.getElementById('wdate').value;
+  W.obs=p1('pg-obs');
+  W.ready=true;
+  syncCtx();
+  sw('cie',1,document.querySelectorAll('.tab')[1]);
+}
+
+function ctx(){
+  const isIF=W.tr.length>1;
+  const isDest=W.loc.toLowerCase().includes('destination');
+  return['WEDDING CONTEXT:','Couple: '+W.p1+' and '+W.p2,'Traditions: '+W.tr.join(' + ')+(isIF?' \u2014 INTERFAITH WEDDING':''),'Size: '+W.sz,'Budget: '+W.bud,'Date: '+W.dt,'Location: '+W.loc,'Observance: '+W.obs,isDest?'DESTINATION WEDDING \u2014 apply all destination checks: legal marriage recognition, visa requirements for international guests, travel advisory monitoring, Stripe market availability, currency risk.':'',isIF?'INTERFAITH WEDDING \u2014 include a CONFLICT FLAGS section: decisions the couple must make together, framed as choices not problems.':''].filter(Boolean).join('\n');
+}
+
+async function ask(sys,usr,resId,outId,btnId,lbl){
+  const btn=document.getElementById(btnId);
+  const out=document.getElementById(outId);
+  const res=document.getElementById(resId);
+  btn.disabled=true;
+  btn.innerHTML='Thinking\u2026 <span class="arr">\u00b7</span>';
+  out.style.display='block';
+  res.className='out-body spin';
+  res.textContent='Writing\u2026';
+  try{
+    const r=await fetch('/api/chat',{
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({model:'claude-sonnet-4-6',max_tokens:1000,system:sys,messages:[{role:'user',content:usr}]})
+    });
+    if(!r.ok){
+      const txt=await r.text();
+      throw new Error('Server responded with '+r.status+': '+txt.slice(0,120));
+    }
+    const d=await r.json();
+    if(d.error)throw new Error(d.error.message);
+    res.className='out-body';
+    res.textContent=(d.content||[]).map(b=>b.text||'').join('');
+  }catch(e){
+    res.className='out-body';
+    res.textContent='\u26a0 '+e.message;
+  }
+  btn.disabled=false;
+  btn.innerHTML=lbl+' <span class="arr">\u2192</span>';
+}
+
+function runCIE(){
+  const sys=`You are the Marigold Cultural Intelligence Engine.\nRULES:\n1. Draw only from culturally verified information. Where uncertain say "confirm with your officiant and family."\n2. Never suggest one tradition takes priority over another.\n3. Size-aware: Micro/intimate = shorter checklist, experience-first budget. Large/grand = delegation-first.\n4. Tariff: flag imported textiles (lehenga, aso-ebi) and florals (Indian marigolds, jasmine) as tariff-sensitive. Recommend price-lock deposits.\n5. Destination: flag marriage recognition at home country, visa requirements, travel advisories.\n6. Interfaith: include CONFLICT FLAGS section — decisions framed as choices not problems.\n7. Close with: "Confirm all ceremony details with your officiant and families before booking."\nWrite in a warm editorial voice. Clear sections. Specific and useful.`;
+  ask(sys,ctx()+'\n\nFOCUS: '+p1('pg-cfocus')+'\n\nGenerate the wedding plan.','cie-res','cie-out','cie-btn','Generate my plan');
+}
+
+function runVendor(){
+  const sys=`You are the Marigold Vendor Match Agent.\nRULES:\n1. Cultural fit is the primary criterion.\n2. Size-aware: only recommend vendors experienced at ${W.sz} scale.\n3. Reference real vendors from research where helpful:\n   NY/NJ: Mehndisha\u2014Nisha Sharma (mehndi), Tum Hi Ho Events\u2014Hiren (interfaith South Asian planner), Laksa Events (South Asian NJ), Events by Kae (Nigerian NY), Nimma Ovwori Weddings (Nigerian/Ghanaian NJ), Dave Robbins Photography, Beautini (hair & makeup), Designs by Ahn (florist), Cantor Laura Stein (interfaith officiant), Rabbi Ron Broden (interfaith officiant).\n   Chicago: VEK Photo\u2014Vinnie, Shan Photography, Rahul Rana Photography, Madison Elyse Events.\n   LA: Denise Lillie Engagements, Events by Mala, Rani Raja Weddings, Nahid Global Events.\n   Always label as "examples to verify current availability."\n4. Dietary: never suggest non-kosher for kosher vendors, non-halal for halal vendors.\n5. Flag tariff risks for imported florals, specialty ingredients, textiles.\nFormat: what to look for \u2192 example vendors with reasons \u2192 where to find more \u2192 key questions to ask \u2192 budget reality check.`;
+  ask(sys,ctx()+'\n\nVENDOR: '+p1('pg-vcat')+'\nBUDGET: '+p1('pg-vbud')+'\nEVENT DATE: '+document.getElementById('vdate').value,'vm-res','vm-out','vm-btn','Find vendors');
+}
+
+function runInquiry(){
+  const diet=p1('pg-idiet');
+  const sys=`You are the Marigold Inquiry Drafter.\nABSOLUTE RULES:\n1. DIETARY SAFETY \u2014 vendor certification: "${diet}". Kosher: NEVER mention pork, shellfish, or mixing meat/dairy. Halal: NEVER mention pork or alcohol. Zero exceptions.\n2. Maximum 160 words.\n3. Always include a price-lock question.\n4. One specific genuine detail about the vendor. Not flattery \u2014 specificity.\n5. Include event name, date, guest count, need, budget.\n6. Never open with "I hope this email finds you well."\n7. End with: [Review before sending \u2014 personalise the opening and confirm all details]\nAfter draft add:\nCultural details included: (one line)\nTariff note: (if relevant, otherwise omit)`;
+  ask(sys,ctx()+'\n\nVENDOR: '+document.getElementById('iv').value+'\nCATEGORY: '+p1('pg-icat')+'\nDIETARY: '+diet+'\nEVENT: '+document.getElementById('iev').value+'\nDATE: '+document.getElementById('iedate').value+'\nGUESTS: '+document.getElementById('iguests').value+'\nBUDGET: '+document.getElementById('ibud').value+'\n\nDraft the message.','inq-res','inq-out','inq-btn','Draft my message');
+}
+
+function runGuest(){
+  const sys=`You are the Marigold Guest Communication Agent.\nRULES:\n1. Never take sides between traditions. Represent both equally.\n2. Tone must be exactly: ${p1('pg-gtone')}. Match throughout.\n3. Cultural explanations: welcoming and educational, never make guests feel like outsiders.\n4. Never reference geopolitical tensions or religious conflicts.\n5. Write in the couple's voice \u2014 from ${W.p1} and ${W.p2}, not from a platform.\n6. End with: [Review before sending \u2014 add personal details and confirm all information]\nAfter draft: Cultural context included: (one line)`;
+  ask(sys,ctx()+'\n\nTYPE: '+p1('pg-gtype')+'\nAUDIENCE: '+p1('pg-gaud')+'\nTONE: '+p1('pg-gtone')+'\nNOTES: '+document.getElementById('gnotes').value+'\n\nDraft the message.','gc-res','gc-out','gc-btn','Draft message');
+}
+</script>
+</body>
+</html>
