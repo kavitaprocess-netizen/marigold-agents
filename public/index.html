@@ -72,8 +72,16 @@ textarea.fi{border:1px solid var(--bdr);border-radius:8px;padding:12px 14px;resi
 .out-ey{font-size:10px;letter-spacing:2px;text-transform:uppercase;color:var(--muted);margin-bottom:18px;display:flex;align-items:center;gap:8px}
 .out-ey::after{content:'';flex:1;height:1px;background:var(--bdr)}
 .out-body{font-size:14px;line-height:1.85;color:var(--tx);font-family:Georgia,serif}
-.out-body.spin{color:var(--muted);font-style:italic;animation:pulse 1.6s ease-in-out infinite}
-@keyframes pulse{0%,100%{opacity:1}50%{opacity:.25}}
+.out-body.spin{color:var(--muted)}
+
+.loading-bloom{display:flex;align-items:center;gap:12px;padding:6px 0}
+.marigold-spin{animation:bloom-spin 2.2s linear infinite;vertical-align:middle}
+.loading-bloom span{font-style:italic;font-size:14px;color:var(--muted);animation:pulse 1.6s ease-in-out infinite}
+@keyframes bloom-spin{from{transform:rotate(0deg)}to{transform:rotate(360deg)}}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
+
+.gen-stamp{font-family:'Playfair Display',Georgia,serif;font-style:italic;font-size:11px;color:var(--gk);background:var(--g);display:inline-block;padding:4px 12px;border-radius:100px;margin-bottom:18px}
+.regen-note{font-size:11px;color:var(--gk);font-style:italic;background:var(--warm);border-left:2px solid var(--gd);padding:8px 12px;margin-top:12px;line-height:1.6;max-width:420px}
 
 .out-body h1,.out-body h2,.out-body h3{font-family:'Playfair Display',Georgia,serif;color:var(--deep);font-weight:500;font-style:italic;line-height:1.3}
 .out-body h1{font-size:22px;margin:28px 0 14px}
@@ -533,13 +541,22 @@ function finalizeSetup(){
 }
 
 function showRunButton(flow){
-  let label = {cie:'Generate my plan', vendor:'Find vendors', inquiry:'Draft my message', guest:'Draft message'}[flow];
+  const freshLabels = {cie:'Generate my plan', vendor:'Find vendors', inquiry:'Draft my message', guest:'Draft message'};
+  const regenLabels = {cie:'Regenerate my plan', vendor:'Search again', inquiry:'Redraft my message', guest:'Redraft message'};
+  let label = freshLabels[flow];
   if(flow==='vendor' && STATE.vendor.answers.source==='bring my own'){
-    label = 'Send invite';
+    label = STATE.vendor.generatedAt ? 'Resend invite' : 'Send invite';
+  } else if(STATE[flow].generatedAt){
+    label = regenLabels[flow];
   }
+
   const card = document.getElementById('qc-'+flow);
-  card.innerHTML = '<button class="cta" id="run-'+flow+'" onclick="runFlow(\''+flow+'\')">'+label+' <span class="arr">\u2192</span></button>'+
+  let html = '<button class="cta" id="run-'+flow+'" onclick="runFlow(\''+flow+'\')">'+label+' <span class="arr">\u2192</span></button>'+
     '<div style="margin-top:14px"><button class="back-link" onclick="goBack(\''+flow+'\')">edit answers</button></div>';
+  if(STATE[flow].generatedAt){
+    html += '<div class="regen-note">You already generated a result below \u2014 clicking this will replace it with a new version, which may come out a little different each time.</div>';
+  }
+  card.innerHTML = html;
 }
 
 /* ============ TAB SWITCHING ============ */
@@ -585,6 +602,29 @@ function syncCtx(){
 
 /* ============ MARKDOWN RENDERER ============ */
 /* ============ CHECKLIST PERSISTENCE (localStorage) ============ */
+/* ============ MARIGOLD LOADING SPINNER (same mark as the brand logo) ============ */
+function marigoldSpinnerSVG(size){
+  size = size || 30;
+  return '<svg class="marigold-spin" width="'+size+'" height="'+size+'" viewBox="0 0 34 34" xmlns="http://www.w3.org/2000/svg">'+
+    '<g fill="#E0B030" stroke="#C8941A" stroke-width="0.4">'+
+      [0,25.7,51.4,77.1,102.8,128.5,154.2,180,205.7,231.4,257.1,282.8,308.5,334.2].map(a=>
+        '<ellipse cx="17" cy="5.8" rx="1.9" ry="4.4" transform="rotate('+a+' 17 17)"/>').join('')+
+    '</g>'+
+    '<g fill="#F2C53D" stroke="#D9A828" stroke-width="0.35">'+
+      [12.9,38.6,64.3,90,115.7,141.4,167.1,192.8,218.5,244.2,270,295.7,321.4,347.1].map(a=>
+        '<ellipse cx="17" cy="7.8" rx="1.55" ry="3.4" transform="rotate('+a+' 17 17)"/>').join('')+
+    '</g>'+
+    '<g fill="#F7D44C" stroke="#E0B030" stroke-width="0.3">'+
+      [0,20,40,60,80,100,120,140,160,180,200,220,240,260,280,300,320,340].map(a=>
+        '<ellipse cx="17" cy="10.2" rx="1.3" ry="2.4" transform="rotate('+a+' 17 17)"/>').join('')+
+    '</g>'+
+    '<circle cx="17" cy="17" r="4.1" fill="#6B5318" stroke="#5A4512" stroke-width="0.3"/>'+
+    '<circle cx="15.5" cy="15.8" r="0.45" fill="#3C3010"/>'+
+    '<circle cx="18.5" cy="15.8" r="0.45" fill="#3C3010"/>'+
+    '<circle cx="17" cy="18.4" r="0.45" fill="#3C3010"/>'+
+  '</svg>';
+}
+
 function simpleHash(str){
   let hash = 0;
   for(let i=0;i<str.length;i++){
@@ -642,9 +682,17 @@ function renderMD(src, opts){
       const headCells = line.trim().replace(/^\|/,'').replace(/\|$/,'').split('|').map(c=>c.trim());
       let body = [];
       i += 2;
-      while(i < lines.length && /\|/.test(lines[i]) && lines[i].trim() !== ''){
-        body.push(lines[i].trim().replace(/^\|/,'').replace(/\|$/,'').split('|').map(c=>c.trim()));
-        i++;
+      while(i < lines.length){
+        if(/\|/.test(lines[i]) && lines[i].trim() !== ''){
+          body.push(lines[i].trim().replace(/^\|/,'').replace(/\|$/,'').split('|').map(c=>c.trim()));
+          i++;
+        } else if(lines[i].trim()==='' && lines[i+1] && /\|/.test(lines[i+1]) && lines[i+1].trim() !== ''){
+          // a blank line sitting between table rows is common model formatting drift \u2014
+          // skip it and keep the table going rather than treating it as the table's end
+          i++;
+        } else {
+          break;
+        }
       }
       html += '<div class="out-table-wrap"><table><thead><tr>' +
         headCells.map(c=>'<th>'+inline(c)+'</th>').join('') +
@@ -710,14 +758,14 @@ function ctx(){
 }
 
 /* ============ API CALL ============ */
-async function ask(sys,usr,resId,outId,btnId,lbl,renderOpts){
+async function ask(sys,usr,resId,outId,btnId,lbl,renderOpts,flow){
   const btn=document.getElementById(btnId);
   const out=document.getElementById(outId);
   const res=document.getElementById(resId);
   if(btn){btn.disabled=true; btn.innerHTML='Thinking\u2026 <span class="arr">\u00b7</span>';}
   out.style.display='block';
   res.className='out-body spin';
-  res.textContent='Writing\u2026';
+  res.innerHTML='<div class="loading-bloom">'+marigoldSpinnerSVG(34)+'<span>Writing\u2026</span></div>';
   try{
     const r=await fetch('/api/chat',{
       method:'POST',
@@ -732,12 +780,16 @@ async function ask(sys,usr,resId,outId,btnId,lbl,renderOpts){
     if(d.error)throw new Error(d.error.message);
     res.className='out-body';
     const raw=(d.content||[]).map(b=>b.text||'').join('');
-    res.innerHTML=renderMD(raw, renderOpts);
+    const timeStamp = new Date().toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'});
+    let stampHTML = '<p class="gen-stamp">Generated just now \u00b7 '+timeStamp+'</p>';
+    res.innerHTML = stampHTML + renderMD(raw, renderOpts);
+    if(flow){ STATE[flow].generatedAt = Date.now(); }
   }catch(e){
     res.className='out-body';
     res.innerHTML='<p style="color:var(--muted);font-style:italic">\u26a0 '+String(e.message).replace(/&/g,'&amp;').replace(/</g,'&lt;')+'</p>';
   }
   if(btn){btn.disabled=false; btn.innerHTML=lbl+' <span class="arr">\u2192</span>';}
+  if(flow){ showRunButton(flow); }
   out.scrollIntoView({behavior:'smooth', block:'start'});
 }
 
@@ -755,7 +807,7 @@ function runByoInvite(a){
     (a.byo_notes ? '\nNOTES FROM COUPLE: '+a.byo_notes : '')+
     '\n\nDraft a warm invite asking them to join Marigold for our wedding.';
 
-  ask(sys, usr, 'vm-res', 'vm-out', 'run-vendor', 'Send invite');
+  ask(sys, usr, 'vm-res', 'vm-out', 'run-vendor', 'Send invite', null, 'vendor');
 
   // record-style confirmation card, mirroring the vendor/planner tracker fields
   const restartEl = document.getElementById('vm-card-restart');
@@ -776,8 +828,8 @@ function runByoInvite(a){
 function runFlow(flow){
   const a = STATE[flow].answers;
   if(flow==='cie'){
-    const sys=`You are the Marigold Cultural Intelligence Engine.\nRULES:\n1. Draw only from culturally verified information. Where uncertain say "confirm with your officiant and family."\n2. Never suggest one tradition takes priority over another.\n3. Size-aware: Micro/intimate = shorter checklist, experience-first budget. Large/grand = delegation-first.\n4. Tariff: flag imported textiles (lehenga, aso-ebi) and florals (Indian marigolds, jasmine) as tariff-sensitive. Recommend price-lock deposits.\n5. Destination: flag marriage recognition at home country, visa requirements, travel advisories.\n6. Interfaith: include a "Conflict flags" section \u2014 decisions framed as choices not problems.\n7. Close with: "Confirm all ceremony details with your officiant and families before booking."\nFORMATTING: Use clean markdown. ## for section headings (sentence case). Use a real markdown table with | pipes for any budget breakdown \u2014 every table row, including the header and separator, MUST be written as exactly one single line with no line breaks inside it; keep cell contents short (a few words) so this is easy, and never wrap a row across two lines. Use **bold** sparingly for key numbers or terms only. Short paragraphs.\nALWAYS include one section with the exact heading "## Checklist" containing a flat bullet list (- item) of concrete, actionable to-do items the couple can check off \u2014 no nested sub-bullets, no sub-headings inside that section.\nWrite in a warm editorial voice. Specific and useful.`;
-    ask(sys, ctx()+'\n\nFOCUS: '+a.focus+'\n\nGenerate the wedding plan.', 'cie-res','cie-out','run-cie','Generate my plan', {checklistMode:true, idPrefix:'cie'});
+    const sys=`You are the Marigold Cultural Intelligence Engine.\nRULES:\n1. Draw only from culturally verified information. Where uncertain say "confirm with your officiant and family."\n2. Never suggest one tradition takes priority over another.\n3. Size-aware: Micro/intimate = shorter checklist, experience-first budget. Large/grand = delegation-first.\n4. Tariff: flag imported textiles (lehenga, aso-ebi) and florals (Indian marigolds, jasmine) as tariff-sensitive. Recommend price-lock deposits.\n5. Destination: flag marriage recognition at home country, visa requirements, travel advisories.\n6. Interfaith: include a "Conflict flags" section \u2014 decisions framed as choices not problems.\n7. Close with: "Confirm all ceremony details with your officiant and families before booking."\nFORMATTING: Use clean markdown. ## for section headings (sentence case). Use a real markdown table with | pipes for any budget breakdown \u2014 every table row, including the header and separator, MUST be written as exactly one single line with no line breaks inside it; keep cell contents short (a few words) so this is easy, never wrap a row across two lines, and never insert a blank line between table rows \u2014 the entire table (header, separator, and every data row) must be a single unbroken block of consecutive lines with zero blank lines anywhere inside it. Use **bold** sparingly for key numbers or terms only. Short paragraphs.\nALWAYS include one section with the exact heading "## Checklist" containing a flat bullet list (- item) of concrete, actionable to-do items the couple can check off \u2014 no nested sub-bullets, no sub-headings inside that section.\nWrite in a warm editorial voice. Specific and useful.`;
+    ask(sys, ctx()+'\n\nFOCUS: '+a.focus+'\n\nGenerate the wedding plan.', 'cie-res','cie-out','run-cie','Generate my plan', {checklistMode:true, idPrefix:'cie'}, 'cie');
   } else if(flow==='vendor'){
     if(a.source === 'bring my own'){
       runByoInvite(a);
@@ -787,14 +839,14 @@ function runFlow(flow){
     document.getElementById('vm-card-restart').style.display = 'none';
     document.getElementById('vm-card-restart').innerHTML = '';
     const sys=`You are the Marigold Vendor Match Agent.\nRULES:\n1. Cultural fit is the primary criterion.\n2. Size-aware: only recommend vendors experienced at ${W.sz} scale.\n3. Reference real vendors from research where helpful:\n   NY/NJ: Mehndisha\u2014Nisha Sharma (mehndi), Tum Hi Ho Events\u2014Hiren (interfaith South Asian planner), Laksa Events (South Asian NJ), Events by Kae (Nigerian NY), Nimma Ovwori Weddings (Nigerian/Ghanaian NJ), Dave Robbins Photography, Beautini (hair & makeup), Designs by Ahn (florist), Cantor Laura Stein (interfaith officiant), Rabbi Ron Broden (interfaith officiant).\n   Chicago: VEK Photo\u2014Vinnie, Shan Photography, Rahul Rana Photography, Madison Elyse Events.\n   LA: Denise Lillie Engagements, Events by Mala, Rani Raja Weddings, Nahid Global Events.\n   Always label as "examples to verify current availability."\n4. Dietary: never suggest non-kosher for kosher vendors, non-halal for halal vendors.\n5. Flag tariff risks for imported florals, specialty ingredients, textiles.\nFormat: markdown with a ## heading per section (what to look for, example vendors, where to find more, key questions to ask, budget reality check). Bold vendor names only.`;
-    ask(sys, ctx()+'\n\nVENDOR: '+a.cat+'\nBUDGET: '+a.bud+'\nEVENT DATE: '+a.date, 'vm-res','vm-out','run-vendor','Find vendors');
+    ask(sys, ctx()+'\n\nVENDOR: '+a.cat+'\nBUDGET: '+a.bud+'\nEVENT DATE: '+a.date, 'vm-res','vm-out','run-vendor','Find vendors', null, 'vendor');
   } else if(flow==='inquiry'){
     const diet = a.diet;
     const sys=`You are the Marigold Inquiry Drafter.\nABSOLUTE RULES:\n1. DIETARY SAFETY \u2014 vendor certification: "${diet}". Kosher: NEVER mention pork, shellfish, or mixing meat/dairy. Halal: NEVER mention pork or alcohol. Zero exceptions.\n2. Maximum 160 words.\n3. Always include a price-lock question.\n4. One specific genuine detail about the vendor. Not flattery \u2014 specificity.\n5. Include event name, date, guest count, need, budget.\n6. Never open with "I hope this email finds you well."\n7. End with: [Review before sending \u2014 personalise the opening and confirm all details]\nAfter draft add:\nCultural details included: (one line)\nTariff note: (if relevant, otherwise omit)`;
-    ask(sys, ctx()+'\n\nVENDOR: '+a.name+'\nCATEGORY: '+a.cat+'\nDIETARY: '+diet+'\nEVENT: '+a.event+'\nDATE: '+a.date+'\nGUESTS: '+a.guests+'\nBUDGET: '+a.budget+'\n\nDraft the message.', 'inq-res','inq-out','run-inquiry','Draft my message');
+    ask(sys, ctx()+'\n\nVENDOR: '+a.name+'\nCATEGORY: '+a.cat+'\nDIETARY: '+diet+'\nEVENT: '+a.event+'\nDATE: '+a.date+'\nGUESTS: '+a.guests+'\nBUDGET: '+a.budget+'\n\nDraft the message.', 'inq-res','inq-out','run-inquiry','Draft my message', null, 'inquiry');
   } else if(flow==='guest'){
     const sys=`You are the Marigold Guest Communication Agent.\nRULES:\n1. Never take sides between traditions. Represent both equally.\n2. Tone must be exactly: ${a.tone}. Match throughout.\n3. Cultural explanations: welcoming and educational, never make guests feel like outsiders.\n4. Never reference geopolitical tensions or religious conflicts.\n5. Write in the couple's voice \u2014 from ${W.p1} and ${W.p2}, not from a platform.\n6. End with: [Review before sending \u2014 add personal details and confirm all information]\nAfter draft: Cultural context included: (one line)`;
-    ask(sys, ctx()+'\n\nTYPE: '+a.type+'\nAUDIENCE: '+a.aud+'\nTONE: '+a.tone+'\nNOTES: '+(a.notes||'none')+'\n\nDraft the message.', 'gc-res','gc-out','run-guest','Draft message');
+    ask(sys, ctx()+'\n\nTYPE: '+a.type+'\nAUDIENCE: '+a.aud+'\nTONE: '+a.tone+'\nNOTES: '+(a.notes||'none')+'\n\nDraft the message.', 'gc-res','gc-out','run-guest','Draft message', null, 'guest');
   }
 }
 
@@ -821,7 +873,14 @@ function renderIntro(){
 function chooseGuided(){
   goTabRaw('setup');
   STATE.setup.idx = 0;
-  STATE.setup.prefilled = {};
+  // Re-mark any answers we already have (from a prior pass, however they were entered)
+  // as prefilled so the question flow skips straight past what's already known.
+  if(!STATE.setup.prefilled) STATE.setup.prefilled = {};
+  FLOWS.setup.forEach(q=>{
+    const val = STATE.setup.answers[q.key];
+    const hasValue = Array.isArray(val) ? val.length > 0 : (val !== undefined && val !== '');
+    if(hasValue){ STATE.setup.prefilled[q.key] = true; }
+  });
   renderTranscript('setup');
   renderQuestion('setup');
 }
@@ -855,20 +914,28 @@ async function extractFromFreeText(){
 
   const btn = document.getElementById('extract-btn');
   btn.disabled = true;
-  btn.innerHTML = 'Reading\u2026 <span class="arr">\u00b7</span>';
+  btn.innerHTML = 'Reading\u2026 ' + marigoldSpinnerSVG(16);
 
-  const sys = `You extract structured wedding-planning details from free text. Respond with ONLY a single valid JSON object, no markdown fences, no commentary.
+  const sys = `You extract structured wedding-planning details from free text.
+CRITICAL: Your entire response must be ONLY the JSON object \u2014 nothing else. No preamble such as "Here is the data", no markdown code fences, no closing remarks or explanation. The very first character of your response must be { and the very last character must be }.
+
+For "sz", "loc", "bud", and "obs": you MUST return the exact bucket label string from the allowed list below, copied verbatim \u2014 never the user's raw number or phrase. For example if the text says "around 120 guests", you must map that to the bucket it falls into ("Mid-size (75\u2013200 guests)") and return that exact string, not "120 guests". If a number or detail doesn't clearly fall into one of the listed buckets, return null for that field rather than guessing or inventing a new label.
+
 Fields to extract (use null for any not mentioned or unclear \u2014 do not guess):
 {
   "p1": string or null (first partner's first name),
   "p2": string or null (second partner's first name),
-  "tr": array of up to 2 strings or null \u2014 choose only from this exact list: ["Hindu (North Indian / Punjabi)","Jewish (Reform / Conservative)","Muslim (Nikah)","Nigerian (Yoruba)","Nigerian (Igbo)","Sikh","Western / Civil","Chinese / Taiwanese"],
-  "sz": string or null \u2014 choose only from: ["Micro (under 20 guests)","Intimate (20\u201375 guests)","Mid-size (75\u2013200 guests)","Large (200\u2013500 guests)","Grand (500+ guests)"],
-  "loc": string or null \u2014 choose only from: ["New York / New Jersey","Chicago","Los Angeles","Destination \u2014 Italy","Destination \u2014 India","Destination \u2014 Nigeria","Destination \u2014 Morocco","Destination \u2014 Bali","Destination \u2014 Israel"] (if a destination is mentioned that isn't in this list, pick the closest match or null),
-  "bud": string or null \u2014 choose only from: ["under $25,000","$25,000\u2013$50,000","$50,000\u2013$100,000","$100,000\u2013$200,000","$200,000+"],
+  "tr": array of up to 2 strings or null \u2014 choose only from this exact list, copied verbatim: ["Hindu (North Indian / Punjabi)","Jewish (Reform / Conservative)","Muslim (Nikah)","Nigerian (Yoruba)","Nigerian (Igbo)","Sikh","Western / Civil","Chinese / Taiwanese"],
+  "sz": string or null \u2014 choose only from this exact list, copied verbatim: ["Micro (under 20 guests)","Intimate (20\u201375 guests)","Mid-size (75\u2013200 guests)","Large (200\u2013500 guests)","Grand (500+ guests)"],
+  "loc": string or null \u2014 choose only from this exact list, copied verbatim: ["New York / New Jersey","Chicago","Los Angeles","Destination \u2014 Italy","Destination \u2014 India","Destination \u2014 Nigeria","Destination \u2014 Morocco","Destination \u2014 Bali","Destination \u2014 Israel"] (if a destination is mentioned that isn't in this list, pick the closest match or null),
+  "bud": string or null \u2014 choose only from this exact list, copied verbatim: ["under $25,000","$25,000\u2013$50,000","$50,000\u2013$100,000","$100,000\u2013$200,000","$200,000+"],
   "dt": string or null (the date or timeframe as the user wrote it, e.g. "June 2026"),
-  "obs": string or null \u2014 choose only from: ["cultural / secular","moderately observant","strictly observant"]
+  "obs": string or null \u2014 choose only from this exact list, copied verbatim: ["cultural / secular","moderately observant","strictly observant"]
 }
+
+Worked example \u2014 input: "We're Rachel and Arjun, around 120 guests in NYC next June, budget about $75k, both families fairly observant"
+Correct output: {"p1":"Rachel","p2":"Arjun","tr":null,"sz":"Mid-size (75\u2013200 guests)","loc":"New York / New Jersey","bud":"$50,000\u2013$100,000","dt":"June 2026","obs":"moderately observant"}
+
 Only fill a field if it is reasonably clear from the text. Leave ambiguous or unmentioned fields as null.`;
 
   try{
@@ -881,10 +948,10 @@ Only fill a field if it is reasonably clear from the text. Leave ambiguous or un
     const d = await r.json();
     if(d.error) throw new Error(d.error.message);
     const raw = (d.content||[]).map(b=>b.text||'').join('').trim();
-    const jsonStr = raw.replace(/^```json\s*/i,'').replace(/^```\s*/,'').replace(/```\s*$/,'').trim();
-    const parsed = JSON.parse(jsonStr);
+    const parsed = extractJSONObject(raw);
     applyExtracted(parsed, text);
   } catch(e){
+    console.error('Marigold: free-text extraction failed \u2014 falling back to guided questions.', e);
     // graceful fallback: just go to guided flow if extraction fails
     goTabRaw('setup');
     STATE.setup.idx = 0;
@@ -893,6 +960,16 @@ Only fill a field if it is reasonably clear from the text. Leave ambiguous or un
       '<div class="extracted-note">We couldn\u2019t quite parse that automatically, so let\u2019s go through it together instead.</div>';
     setTimeout(()=>{ renderTranscript('setup'); renderQuestion('setup'); }, 900);
   }
+}
+
+function extractJSONObject(raw){
+  const firstBrace = raw.indexOf('{');
+  const lastBrace = raw.lastIndexOf('}');
+  if(firstBrace === -1 || lastBrace === -1 || lastBrace < firstBrace){
+    throw new Error('No JSON object found in model response: '+raw.slice(0,200));
+  }
+  const candidate = raw.slice(firstBrace, lastBrace+1);
+  return JSON.parse(candidate);
 }
 
 function applyExtracted(parsed, originalText){
@@ -912,6 +989,31 @@ function applyExtracted(parsed, originalText){
     return optionsList.find(o => norm(o) === target) || null;
   }
 
+  // Fallback: if the model ignored instructions and returned a raw number instead
+  // of the bucket label (e.g. "120 guests" instead of "Mid-size (75-200 guests)"),
+  // try to recover by matching the number into the right range.
+  function matchSizeByNumber(val){
+    if(typeof val !== 'string') return null;
+    const n = parseInt(val.replace(/[^\d]/g,''), 10);
+    if(isNaN(n)) return null;
+    if(n < 20) return validOptions.sz.find(o=>o.startsWith('Micro'));
+    if(n <= 75) return validOptions.sz.find(o=>o.startsWith('Intimate'));
+    if(n <= 200) return validOptions.sz.find(o=>o.startsWith('Mid-size'));
+    if(n <= 500) return validOptions.sz.find(o=>o.startsWith('Large'));
+    return validOptions.sz.find(o=>o.startsWith('Grand'));
+  }
+
+  function matchBudgetByNumber(val){
+    if(typeof val !== 'string') return null;
+    const n = parseInt(val.replace(/[^\d]/g,''), 10);
+    if(isNaN(n)) return null;
+    if(n < 25000) return validOptions.bud.find(o=>o.startsWith('under'));
+    if(n <= 50000) return validOptions.bud.find(o=>o.startsWith('$25,000'));
+    if(n <= 100000) return validOptions.bud.find(o=>o.startsWith('$50,000'));
+    if(n <= 200000) return validOptions.bud.find(o=>o.startsWith('$100,000'));
+    return validOptions.bud.find(o=>o.startsWith('$200,000'));
+  }
+
   STATE.setup.idx = 0;
   STATE.setup.answers = {};
   STATE.setup.prefilled = {};
@@ -926,7 +1028,9 @@ function applyExtracted(parsed, originalText){
       const cleaned = val.map(v=>matchOption(v, validOptions.tr)).filter(Boolean).slice(0,2);
       if(cleaned.length){ STATE.setup.answers.tr = cleaned; ok = true; }
     } else if(['sz','loc','bud','obs'].includes(q.key) && val){
-      const matched = matchOption(val, validOptions[q.key]);
+      let matched = matchOption(val, validOptions[q.key]);
+      if(!matched && q.key==='sz'){ matched = matchSizeByNumber(val); }
+      if(!matched && q.key==='bud'){ matched = matchBudgetByNumber(val); }
       if(matched){ STATE.setup.answers[q.key] = matched; ok = true; }
     } else if(['p1','p2','dt'].includes(q.key) && typeof val==='string' && val.trim()){
       STATE.setup.answers[q.key] = val.trim(); ok = true;
