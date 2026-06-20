@@ -1,0 +1,883 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Marigold Weddings — AI Agents</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,500;1,400;1,500&display=swap" rel="stylesheet">
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --g:#F7D44C;--gd:#C8A820;--gk:#9A7E10;--deep:#3C3010;
+  --cream:#FDFAF0;--warm:#F5F0E8;--muted:#9A8A6A;--bdr:#E0D4B0;--tx:#2A2010;
+}
+html,body{min-height:100vh;background:var(--cream);color:var(--tx);font-family:'Playfair Display',Georgia,serif;font-size:15px;line-height:1.7}
+
+.wrap{border-bottom:1px solid var(--bdr);padding:16px 24px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;background:var(--cream);z-index:10}
+.brand{display:flex;align-items:center;gap:10px}
+.bname{font-size:12px;letter-spacing:3px;color:var(--deep);font-style:italic}
+.step-dots{display:flex;gap:5px;align-items:center}
+.dot{width:5px;height:5px;border-radius:50%;background:var(--bdr);transition:all .3s}
+.dot.done{background:var(--gd)}
+.dot.now{background:var(--deep);width:7px;height:7px}
+
+.tabs{display:flex;border-bottom:1px solid var(--bdr);padding:0 24px;overflow-x:auto;background:var(--cream)}
+.tab{padding:10px 0;margin-right:24px;font-size:11px;letter-spacing:1.5px;color:var(--muted);cursor:pointer;border:none;border-bottom:2px solid transparent;background:transparent;font-family:'Playfair Display',Georgia,serif;transition:all .2s;white-space:nowrap;flex-shrink:0}
+.tab:hover{color:var(--deep)}
+.tab.on{color:var(--deep);border-bottom-color:var(--deep)}
+.tab:disabled{opacity:.35;cursor:not-allowed}
+
+.body{padding:40px 24px 80px;max-width:600px;margin:0 auto}
+.screen{display:none}
+.screen.on{display:block}
+
+.ctx{background:var(--warm);border-radius:8px;padding:11px 16px;margin-bottom:32px;display:flex;align-items:center;gap:8px;flex-wrap:wrap;font-size:12px;color:var(--deep);font-style:italic;line-height:1.5}
+.ctx-edit{margin-left:auto;font-size:10px;letter-spacing:1px;color:var(--muted);cursor:pointer;background:none;border:none;font-family:'Playfair Display',Georgia,serif;text-decoration:underline;flex-shrink:0}
+
+/* ---- conversational transcript ---- */
+.transcript{margin-bottom:8px}
+.t-row{margin-bottom:22px;animation:rise .35s ease both}
+@keyframes rise{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:translateY(0)}}
+.t-q{font-size:10px;letter-spacing:2px;text-transform:uppercase;color:var(--muted);margin-bottom:6px}
+.t-q-text{font-size:16px;color:var(--deep);font-style:italic;margin-bottom:8px}
+.t-a{display:inline-flex;align-items:center;gap:8px;background:var(--deep);color:var(--cream);padding:7px 16px;border-radius:100px;font-size:13px;font-style:italic}
+.t-a-edit{background:none;border:none;color:var(--muted);font-size:10px;letter-spacing:1px;text-decoration:underline;cursor:pointer;font-family:'Playfair Display',Georgia,serif;margin-left:4px}
+
+/* ---- active question card ---- */
+.qcard{animation:rise .4s ease both}
+.ql{font-size:10px;letter-spacing:2px;text-transform:uppercase;color:var(--muted);margin-bottom:8px}
+.qt{font-size:24px;line-height:1.3;color:var(--deep);font-style:italic;font-weight:400;margin-bottom:6px}
+.qs{font-size:13px;color:var(--muted);margin-bottom:18px;font-style:normal}
+
+.pg{display:flex;flex-wrap:wrap;gap:7px;margin-bottom:18px}
+.p{padding:9px 18px;border-radius:100px;border:1px solid var(--bdr);font-size:14px;color:var(--tx);cursor:pointer;background:#fff;font-family:'Playfair Display',Georgia,serif;font-style:italic;transition:all .15s}
+.p:hover{border-color:var(--gd);background:var(--warm)}
+.p.on{border-color:var(--deep);background:var(--deep);color:var(--cream)}
+
+.fi{width:100%;border:none;border-bottom:1px solid var(--bdr);padding:10px 0;font-size:18px;font-family:'Playfair Display',Georgia,serif;font-style:italic;color:var(--tx);background:transparent;outline:none;transition:border-color .2s;margin-bottom:18px}
+.fi:focus{border-bottom-color:var(--deep)}
+.fi::placeholder{color:var(--bdr)}
+textarea.fi{border:1px solid var(--bdr);border-radius:8px;padding:12px 14px;resize:vertical;min-height:80px;font-size:14px;font-style:normal}
+
+.qnav{display:flex;align-items:center;gap:14px}
+.cta{display:inline-flex;align-items:center;gap:10px;padding:12px 26px;background:var(--deep);color:var(--cream);border:none;border-radius:100px;font-size:12px;letter-spacing:2px;cursor:pointer;font-family:'Playfair Display',Georgia,serif;font-style:italic;transition:background .2s}
+.cta:hover{background:var(--gk)}
+.cta:disabled{opacity:.35;cursor:not-allowed}
+.arr{font-size:17px;display:inline-block;transition:transform .2s}
+.cta:hover .arr{transform:translateX(4px)}
+.back-link{background:none;border:none;color:var(--muted);font-size:11px;letter-spacing:1px;cursor:pointer;font-family:'Playfair Display',Georgia,serif;text-decoration:underline}
+
+.out{margin-top:36px;padding-top:32px;border-top:1px solid var(--bdr);display:none}
+.out-ey{font-size:10px;letter-spacing:2px;text-transform:uppercase;color:var(--muted);margin-bottom:18px;display:flex;align-items:center;gap:8px}
+.out-ey::after{content:'';flex:1;height:1px;background:var(--bdr)}
+.out-body{font-size:14px;line-height:1.85;color:var(--tx);font-family:Georgia,serif}
+.out-body.spin{color:var(--muted);font-style:italic;animation:pulse 1.6s ease-in-out infinite}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.25}}
+
+.out-body h1,.out-body h2,.out-body h3{font-family:'Playfair Display',Georgia,serif;color:var(--deep);font-weight:500;font-style:italic;line-height:1.3}
+.out-body h1{font-size:22px;margin:28px 0 14px}
+.out-body h1:first-child{margin-top:0}
+.out-body h2{font-size:18px;margin:26px 0 12px}
+.out-body h2:first-child{margin-top:0}
+.out-body h3{font-size:15px;margin:20px 0 8px;font-style:normal;letter-spacing:.3px}
+.out-body p{margin:0 0 14px}
+.out-body strong{color:var(--deep);font-weight:700}
+.out-body em{font-style:italic}
+.out-body ul,.out-body ol{margin:0 0 16px;padding-left:22px}
+.out-body li{margin-bottom:6px}
+.out-body hr{border:none;border-top:1px solid var(--bdr);margin:24px 0}
+.out-table-wrap{overflow-x:auto;margin:0 0 20px;border:1px solid var(--bdr);border-radius:8px}
+.out-body table{width:100%;border-collapse:collapse;font-size:13px}
+.out-body th{background:var(--warm);color:var(--deep);font-weight:700;text-align:left;padding:9px 12px;border-bottom:1px solid var(--bdr);white-space:nowrap}
+.out-body td{padding:9px 12px;border-bottom:1px solid var(--bdr);vertical-align:top}
+.out-body tr:last-child td{border-bottom:none}
+.out-body tr:nth-child(even) td{background:rgba(0,0,0,0.012)}
+
+.restart{margin-top:28px;text-align:center}
+.restart button{background:none;border:none;color:var(--muted);font-size:11px;letter-spacing:1px;text-decoration:underline;cursor:pointer;font-family:'Playfair Display',Georgia,serif}
+
+.choice-cards{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-top:24px}
+.choice-card{background:#fff;border:1px solid var(--bdr);border-radius:12px;padding:22px 20px;cursor:pointer;transition:all .18s;text-align:left}
+.choice-card:hover{border-color:var(--gd);background:var(--warm)}
+.choice-card .cc-title{font-size:17px;font-style:italic;color:var(--deep);margin-bottom:6px}
+.choice-card .cc-sub{font-size:12px;color:var(--muted);font-style:normal;line-height:1.5}
+.free-area{width:100%;border:1px solid var(--bdr);border-radius:10px;padding:16px;font-size:14px;font-family:Georgia,serif;font-style:normal;color:var(--tx);resize:vertical;min-height:160px;outline:none;background:#fff;margin-bottom:18px}
+.free-area:focus{border-color:var(--gd)}
+.free-hint{font-size:12px;color:var(--muted);font-style:italic;margin-bottom:14px;line-height:1.6}
+.extracted-note{background:var(--warm);border-radius:8px;padding:12px 16px;font-size:12px;color:var(--deep);font-style:italic;margin-bottom:24px;line-height:1.6}
+
+@media(max-width:600px){.body{padding:28px 16px 70px}.qt{font-size:21px}.choice-cards{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+
+<div class="wrap">
+  <div class="brand">
+    <svg width="26" height="26" viewBox="0 0 34 34" xmlns="http://www.w3.org/2000/svg">
+      <g fill="#E0B030" stroke="#C8941A" stroke-width="0.4">
+        <ellipse cx="17" cy="5.8" rx="1.9" ry="4.4" transform="rotate(0 17 17)"/>
+        <ellipse cx="17" cy="5.8" rx="1.9" ry="4.4" transform="rotate(25.7 17 17)"/>
+        <ellipse cx="17" cy="5.8" rx="1.9" ry="4.4" transform="rotate(51.4 17 17)"/>
+        <ellipse cx="17" cy="5.8" rx="1.9" ry="4.4" transform="rotate(77.1 17 17)"/>
+        <ellipse cx="17" cy="5.8" rx="1.9" ry="4.4" transform="rotate(102.8 17 17)"/>
+        <ellipse cx="17" cy="5.8" rx="1.9" ry="4.4" transform="rotate(128.5 17 17)"/>
+        <ellipse cx="17" cy="5.8" rx="1.9" ry="4.4" transform="rotate(154.2 17 17)"/>
+        <ellipse cx="17" cy="5.8" rx="1.9" ry="4.4" transform="rotate(180 17 17)"/>
+        <ellipse cx="17" cy="5.8" rx="1.9" ry="4.4" transform="rotate(205.7 17 17)"/>
+        <ellipse cx="17" cy="5.8" rx="1.9" ry="4.4" transform="rotate(231.4 17 17)"/>
+        <ellipse cx="17" cy="5.8" rx="1.9" ry="4.4" transform="rotate(257.1 17 17)"/>
+        <ellipse cx="17" cy="5.8" rx="1.9" ry="4.4" transform="rotate(282.8 17 17)"/>
+        <ellipse cx="17" cy="5.8" rx="1.9" ry="4.4" transform="rotate(308.5 17 17)"/>
+        <ellipse cx="17" cy="5.8" rx="1.9" ry="4.4" transform="rotate(334.2 17 17)"/>
+      </g>
+      <g fill="#F2C53D" stroke="#D9A828" stroke-width="0.35">
+        <ellipse cx="17" cy="7.8" rx="1.55" ry="3.4" transform="rotate(12.9 17 17)"/>
+        <ellipse cx="17" cy="7.8" rx="1.55" ry="3.4" transform="rotate(38.6 17 17)"/>
+        <ellipse cx="17" cy="7.8" rx="1.55" ry="3.4" transform="rotate(64.3 17 17)"/>
+        <ellipse cx="17" cy="7.8" rx="1.55" ry="3.4" transform="rotate(90 17 17)"/>
+        <ellipse cx="17" cy="7.8" rx="1.55" ry="3.4" transform="rotate(115.7 17 17)"/>
+        <ellipse cx="17" cy="7.8" rx="1.55" ry="3.4" transform="rotate(141.4 17 17)"/>
+        <ellipse cx="17" cy="7.8" rx="1.55" ry="3.4" transform="rotate(167.1 17 17)"/>
+        <ellipse cx="17" cy="7.8" rx="1.55" ry="3.4" transform="rotate(192.8 17 17)"/>
+        <ellipse cx="17" cy="7.8" rx="1.55" ry="3.4" transform="rotate(218.5 17 17)"/>
+        <ellipse cx="17" cy="7.8" rx="1.55" ry="3.4" transform="rotate(244.2 17 17)"/>
+        <ellipse cx="17" cy="7.8" rx="1.55" ry="3.4" transform="rotate(270 17 17)"/>
+        <ellipse cx="17" cy="7.8" rx="1.55" ry="3.4" transform="rotate(295.7 17 17)"/>
+        <ellipse cx="17" cy="7.8" rx="1.55" ry="3.4" transform="rotate(321.4 17 17)"/>
+        <ellipse cx="17" cy="7.8" rx="1.55" ry="3.4" transform="rotate(347.1 17 17)"/>
+      </g>
+      <g fill="#F7D44C" stroke="#E0B030" stroke-width="0.3">
+        <ellipse cx="17" cy="10.2" rx="1.3" ry="2.4" transform="rotate(0 17 17)"/>
+        <ellipse cx="17" cy="10.2" rx="1.3" ry="2.4" transform="rotate(20 17 17)"/>
+        <ellipse cx="17" cy="10.2" rx="1.3" ry="2.4" transform="rotate(40 17 17)"/>
+        <ellipse cx="17" cy="10.2" rx="1.3" ry="2.4" transform="rotate(60 17 17)"/>
+        <ellipse cx="17" cy="10.2" rx="1.3" ry="2.4" transform="rotate(80 17 17)"/>
+        <ellipse cx="17" cy="10.2" rx="1.3" ry="2.4" transform="rotate(100 17 17)"/>
+        <ellipse cx="17" cy="10.2" rx="1.3" ry="2.4" transform="rotate(120 17 17)"/>
+        <ellipse cx="17" cy="10.2" rx="1.3" ry="2.4" transform="rotate(140 17 17)"/>
+        <ellipse cx="17" cy="10.2" rx="1.3" ry="2.4" transform="rotate(160 17 17)"/>
+        <ellipse cx="17" cy="10.2" rx="1.3" ry="2.4" transform="rotate(180 17 17)"/>
+        <ellipse cx="17" cy="10.2" rx="1.3" ry="2.4" transform="rotate(200 17 17)"/>
+        <ellipse cx="17" cy="10.2" rx="1.3" ry="2.4" transform="rotate(220 17 17)"/>
+        <ellipse cx="17" cy="10.2" rx="1.3" ry="2.4" transform="rotate(240 17 17)"/>
+        <ellipse cx="17" cy="10.2" rx="1.3" ry="2.4" transform="rotate(260 17 17)"/>
+        <ellipse cx="17" cy="10.2" rx="1.3" ry="2.4" transform="rotate(280 17 17)"/>
+        <ellipse cx="17" cy="10.2" rx="1.3" ry="2.4" transform="rotate(300 17 17)"/>
+        <ellipse cx="17" cy="10.2" rx="1.3" ry="2.4" transform="rotate(320 17 17)"/>
+        <ellipse cx="17" cy="10.2" rx="1.3" ry="2.4" transform="rotate(340 17 17)"/>
+      </g>
+      <circle cx="17" cy="17" r="4.1" fill="#6B5318" stroke="#5A4512" stroke-width="0.3"/>
+      <circle cx="15.5" cy="15.8" r="0.45" fill="#3C3010"/>
+      <circle cx="18.5" cy="15.8" r="0.45" fill="#3C3010"/>
+      <circle cx="17" cy="18.4" r="0.45" fill="#3C3010"/>
+    </svg>
+    <span class="bname">marigold</span>
+  </div>
+  <div class="step-dots">
+    <div class="dot now" id="d0"></div>
+    <div class="dot" id="d1"></div>
+    <div class="dot" id="d2"></div>
+    <div class="dot" id="d3"></div>
+  </div>
+</div>
+
+<div class="tabs">
+  <button class="tab"  onclick="goTab('setup',0,this)">Your details</button>
+  <button class="tab" id="tab-cie" disabled onclick="goTab('cie',1,this)">Your plan</button>
+  <button class="tab" id="tab-vendor" disabled onclick="goTab('vendor',2,this)">Find vendors</button>
+  <button class="tab" id="tab-inquiry" disabled onclick="goTab('inquiry',3,this)">Message a vendor</button>
+  <button class="tab" id="tab-guest" disabled onclick="goTab('guest',4,this)">Guest messages</button>
+</div>
+
+<div class="body">
+  <div class="screen on" id="s-intro">
+    <div class="qcard" id="qc-intro"></div>
+  </div>
+
+  <div class="screen" id="s-setup">
+    <div class="transcript" id="tr-setup"></div>
+    <div class="qcard" id="qc-setup"></div>
+  </div>
+
+  <div class="screen" id="s-cie">
+    <div class="ctx" id="ctx-cie"></div>
+    <div class="transcript" id="tr-cie"></div>
+    <div class="qcard" id="qc-cie"></div>
+    <div class="out" id="cie-out"><div class="out-ey">Your personalised plan</div><div class="out-body" id="cie-res"></div></div>
+  </div>
+
+  <div class="screen" id="s-vendor">
+    <div class="ctx" id="ctx-vendor"></div>
+    <div class="transcript" id="tr-vendor"></div>
+    <div class="qcard" id="qc-vendor"></div>
+    <div class="out" id="vm-out"><div class="out-ey" id="vm-ey">Vendor recommendations</div><div class="out-body" id="vm-res"></div></div>
+    <div class="restart" id="vm-card-restart" style="display:none"></div>
+  </div>
+
+  <div class="screen" id="s-inquiry">
+    <div class="ctx" id="ctx-inquiry"></div>
+    <div class="transcript" id="tr-inquiry"></div>
+    <div class="qcard" id="qc-inquiry"></div>
+    <div class="out" id="inq-out"><div class="out-ey">Your draft — review before sending</div><div class="out-body" id="inq-res"></div></div>
+  </div>
+
+  <div class="screen" id="s-guest">
+    <div class="ctx" id="ctx-guest"></div>
+    <div class="transcript" id="tr-guest"></div>
+    <div class="qcard" id="qc-guest"></div>
+    <div class="out" id="gc-out"><div class="out-ey">Your draft — review before sending</div><div class="out-body" id="gc-res"></div></div>
+  </div>
+</div>
+
+<script>
+/* ============ DATA MODEL ============ */
+const W={p1:'',p2:'',tr:[],sz:'',loc:'',bud:'',dt:'',obs:'',ready:false};
+
+/* Per-flow question definitions. Each question: {key, label(eyebrow), text, type, options?, placeholder?, default?, multi?, max?}
+   type: 'choice' | 'text' | 'textarea' */
+const FLOWS = {
+  setup: [
+    {key:'p1', label:'Begin here', text:'What\u2019s your first name?', type:'text', placeholder:'Your first name', default:'Rachel'},
+    {key:'p2', label:'Begin here', text:'And your partner\u2019s first name?', type:'text', placeholder:'Partner\u2019s first name', default:'Arjun'},
+    {key:'tr', label:'Traditions', text:'Which traditions are you celebrating?', sub:'Choose up to two \u2014 we blend them thoughtfully.', type:'choice', multi:true, max:2, options:[
+      'Hindu (North Indian / Punjabi)','Jewish (Reform / Conservative)','Muslim (Nikah)','Nigerian (Yoruba)','Nigerian (Igbo)','Sikh','Western / Civil','Chinese / Taiwanese'
+    ], default:['Hindu (North Indian / Punjabi)','Jewish (Reform / Conservative)']},
+    {key:'sz', label:'Guest count', text:'How many guests are you imagining?', type:'choice', options:[
+      'Micro (under 20 guests)','Intimate (20\u201375 guests)','Mid-size (75\u2013200 guests)','Large (200\u2013500 guests)','Grand (500+ guests)'
+    ], display:{'Micro (under 20 guests)':'Under 20 \u2014 just us','Intimate (20\u201375 guests)':'20\u201375 \u2014 close family','Mid-size (75\u2013200 guests)':'75\u2013200','Large (200\u2013500 guests)':'200\u2013500','Grand (500+ guests)':'500+ \u2014 grand celebration'}, default:'Mid-size (75\u2013200 guests)'},
+    {key:'loc', label:'Location', text:'Where will you celebrate?', type:'choice', options:[
+      'New York / New Jersey','Chicago','Los Angeles','Destination \u2014 Italy','Destination \u2014 India','Destination \u2014 Nigeria','Destination \u2014 Morocco','Destination \u2014 Bali','Destination \u2014 Israel'
+    ], default:'New York / New Jersey'},
+    {key:'bud', label:'Budget', text:'What\u2019s your total budget range?', type:'choice', options:[
+      'under $25,000','$25,000\u2013$50,000','$50,000\u2013$100,000','$100,000\u2013$200,000','$200,000+'
+    ], default:'$50,000\u2013$100,000'},
+    {key:'dt', label:'Timing', text:'When\u2019s the big day?', type:'text', placeholder:'e.g. June 2026', default:'June 2026'},
+    {key:'obs', label:'Observance', text:'How observant are your families?', type:'choice', options:[
+      'cultural / secular','moderately observant','strictly observant'
+    ], display:{'cultural / secular':'Cultural / secular','moderately observant':'Moderately observant','strictly observant':'Strictly observant'}, default:'moderately observant'}
+  ],
+  cie: [
+    {key:'focus', label:'Agent one \u00b7 your plan', text:'What would you like to focus on?', type:'choice', options:[
+      'full plan \u2014 ceremonies, checklist, budget, vendor priorities, conflict flags',
+      'immediate priorities \u2014 next 3 months only',
+      'budget breakdown by category',
+      'ceremony sequence and event order',
+      'interfaith conflict flags and decisions to make together',
+      'which vendors to book first and why'
+    ], display:{
+      'full plan \u2014 ceremonies, checklist, budget, vendor priorities, conflict flags':'Everything',
+      'immediate priorities \u2014 next 3 months only':'Next 3 months',
+      'budget breakdown by category':'Budget',
+      'ceremony sequence and event order':'Ceremony sequence',
+      'interfaith conflict flags and decisions to make together':'Conflict flags',
+      'which vendors to book first and why':'Vendor priorities'
+    }, default:'full plan \u2014 ceremonies, checklist, budget, vendor priorities, conflict flags'}
+  ],
+  vendor: [
+    {key:'source', label:'Agent two \u00b7 find vendors', text:'Are you looking for recommendations, or do you already have someone in mind?', type:'choice', options:[
+      'find recommendations','bring my own'
+    ], display:{'find recommendations':'Find recommendations for me','bring my own':'I already have someone in mind'}, default:'find recommendations'},
+    {key:'cat', label:'Agent two \u00b7 find vendors', text:'Who are you looking for?', type:'choice', options:[
+      'mehndi / henna artist','multi-faith officiant','wedding planner','South Asian wedding photographer','kosher-certified caterer','South Asian vegetarian caterer','Nigerian Yoruba caterer','dhol player for baraat','were \u2014 Yoruba praise singer','South Asian florist \u2014 marigolds and jasmine','Jewish chuppah florist','gele tyer','South Asian bridal hair and makeup'
+    ], display:{'mehndi / henna artist':'Mehndi artist','multi-faith officiant':'Multi-faith officiant','wedding planner':'Wedding planner','South Asian wedding photographer':'South Asian photographer','kosher-certified caterer':'Kosher caterer','South Asian vegetarian caterer':'South Asian caterer','Nigerian Yoruba caterer':'Nigerian caterer','dhol player for baraat':'Dhol player','were \u2014 Yoruba praise singer':'Were','South Asian florist \u2014 marigolds and jasmine':'South Asian florist','Jewish chuppah florist':'Chuppah florist','gele tyer':'Gele tyer','South Asian bridal hair and makeup':'Hair & makeup'}, default:'mehndi / henna artist'},
+    {key:'bud', label:'Budget', text:'What\u2019s your budget for this vendor?', type:'choice', options:[
+      'under $500','$500\u2013$1,500','$1,500\u2013$3,500','$3,500\u2013$8,000','$8,000+'
+    ], default:'$500\u2013$1,500', showIf:{source:'find recommendations'}},
+    {key:'date', label:'Event date', text:'When do you need them?', type:'text', placeholder:'e.g. June 12, 2026', default:'June 12, 2026', showIf:{source:'find recommendations'}},
+    {key:'byo_name', label:'Their details', text:'What\u2019s their name?', sub:'Personal name or business name.', type:'text', placeholder:'e.g. Nisha Sharma, Mehndisha', default:'', showIf:{source:'bring my own'}},
+    {key:'byo_business', label:'Their details', text:'What\u2019s their business called?', sub:'Leave blank if they work under their own name.', type:'text', placeholder:'e.g. Mehndisha', default:'', showIf:{source:'bring my own'}},
+    {key:'byo_email', label:'Their details', text:'What\u2019s the best email to reach them?', type:'text', placeholder:'name@example.com', default:'', showIf:{source:'bring my own'}},
+    {key:'byo_instagram', label:'Their details', text:'Do they have an Instagram or website?', sub:'Optional \u2014 leave blank to skip.', type:'text', placeholder:'@handle or website.com', default:'', showIf:{source:'bring my own'}},
+    {key:'byo_source', label:'Their details', text:'How did you find them?', type:'choice', options:[
+      'personal recommendation','social media','wedding website (Zola, The Knot, etc.)','met them in person','other'
+    ], default:'personal recommendation', showIf:{source:'bring my own'}},
+    {key:'byo_notes', label:'Their details', text:'Anything else worth noting?', sub:'Optional \u2014 e.g. why you love their work, prior conversations.', type:'textarea', placeholder:'e.g. Saw their work at my cousin\u2019s wedding...', default:'', showIf:{source:'bring my own'}}
+  ],
+  inquiry: [
+    {key:'name', label:'Agent three \u00b7 message a vendor', text:'Who are you reaching out to?', type:'text', placeholder:'Vendor name', default:'Nisha Sharma \u2014 Mehndisha'},
+    {key:'cat', label:'Vendor type', text:'What do they do?', type:'choice', options:[
+      'mehndi / henna artist','multi-faith officiant','wedding planner','photographer','kosher-certified caterer','halal-certified caterer','South Asian caterer','Nigerian caterer','florist'
+    ], display:{'mehndi / henna artist':'Mehndi','multi-faith officiant':'Officiant','wedding planner':'Wedding planner','photographer':'Photographer','kosher-certified caterer':'Kosher caterer','halal-certified caterer':'Halal caterer','South Asian caterer':'South Asian caterer','Nigerian caterer':'Nigerian caterer','florist':'Florist'}, default:'mehndi / henna artist'},
+    {key:'event', label:'The event', text:'Which event is this for?', type:'text', placeholder:'e.g. Mehndi night', default:'Mehndi night'},
+    {key:'date', label:'The event', text:'What\u2019s the date?', type:'text', placeholder:'e.g. June 12, 2026', default:'June 12, 2026'},
+    {key:'guests', label:'The event', text:'How many guests?', type:'text', placeholder:'e.g. 80 guests', default:'80 guests'},
+    {key:'budget', label:'The event', text:'What\u2019s your budget for this?', type:'text', placeholder:'e.g. $800\u2013$1,500', default:'$800\u2013$1,500'},
+    {key:'diet', label:'Dietary', text:'Any dietary requirements?', type:'choice', options:[
+      'no dietary restrictions','kosher-certified','halal-certified','vegetarian'
+    ], display:{'no dietary restrictions':'None','kosher-certified':'Kosher','halal-certified':'Halal','vegetarian':'Vegetarian'}, default:'no dietary restrictions'}
+  ],
+  guest: [
+    {key:'type', label:'Agent four \u00b7 guest messages', text:'What would you like to send?', type:'choice', options:[
+      'RSVP reminder','ceremony guide \u2014 what to expect at both ceremonies','dress code for all events','travel and accommodation information','mehndi night invitation and what to expect','day-of schedule for all events','post-wedding thank you'
+    ], display:{'RSVP reminder':'RSVP reminder','ceremony guide \u2014 what to expect at both ceremonies':'Ceremony guide','dress code for all events':'Dress code','travel and accommodation information':'Travel info','mehndi night invitation and what to expect':'Mehndi invitation','day-of schedule for all events':'Day-of schedule','post-wedding thank you':'Thank you'}, default:'RSVP reminder'},
+    {key:'aud', label:'Audience', text:'Who is this for?', type:'choice', options:[
+      'all guests \u2014 mixed cultural backgrounds','guests from the Jewish side unfamiliar with Hindu traditions','guests from the Hindu side unfamiliar with Jewish traditions','international guests travelling from abroad','close friends \u2014 keep it warm and informal'
+    ], display:{'all guests \u2014 mixed cultural backgrounds':'All guests','guests from the Jewish side unfamiliar with Hindu traditions':'Jewish side \u2014 new to Hindu','guests from the Hindu side unfamiliar with Jewish traditions':'Hindu side \u2014 new to Jewish','international guests travelling from abroad':'International guests','close friends \u2014 keep it warm and informal':'Close friends'}, default:'all guests \u2014 mixed cultural backgrounds'},
+    {key:'tone', label:'Tone', text:'What tone should it have?', type:'choice', options:[
+      'warm and personal','formal and elegant','casual and fun'
+    ], display:{'warm and personal':'Warm and personal','formal and elegant':'Formal','casual and fun':'Casual'}, default:'warm and personal'},
+    {key:'notes', label:'Anything special?', text:'Anything special to include?', sub:'Optional \u2014 leave blank to skip.', type:'textarea', placeholder:'e.g. some guests have never attended a Hindu ceremony...', default:'Some guests have never attended a Hindu ceremony. Please explain the pheras gently \u2014 the sacred fire, the seven circles, removing shoes.'}
+  ]
+};
+
+/* runtime state per flow */
+const STATE = {
+  setup: {idx:0, answers:{}},
+  cie: {idx:0, answers:{}},
+  vendor: {idx:0, answers:{}},
+  inquiry: {idx:0, answers:{}},
+  guest: {idx:0, answers:{}}
+};
+
+function flowDisplay(q, val){
+  if(q.display){
+    if(Array.isArray(val)) return val.map(v=>q.display[v]||v).join(' + ');
+    return q.display[val] || val;
+  }
+  return Array.isArray(val) ? val.join(' + ') : val;
+}
+
+function renderTranscript(flow){
+  const tEl = document.getElementById('tr-'+flow);
+  const qs = FLOWS[flow];
+  const st = STATE[flow];
+  let html = '';
+  for(let i=0;i<st.idx;i++){
+    const q = qs[i];
+    const val = st.answers[q.key];
+    if(val===undefined || val==='') continue;
+    html += '<div class="t-row">'+
+      '<div class="t-q">'+q.label+'</div>'+
+      '<div class="t-q-text">'+q.text+'</div>'+
+      '<span class="t-a">'+flowDisplay(q,val)+'<button class="t-a-edit" onclick="jumpTo(\''+flow+'\','+i+')">edit</button></span>'+
+      '</div>';
+  }
+  tEl.innerHTML = html;
+}
+
+function jumpTo(flow, i){
+  STATE[flow].idx = i;
+  const q = FLOWS[flow][i];
+  if(STATE[flow].prefilled && q){ delete STATE[flow].prefilled[q.key]; }
+  renderTranscript(flow);
+  renderQuestion(flow);
+}
+
+function questionApplies(flow, q){
+  if(!q.showIf) return true;
+  const st = STATE[flow];
+  return Object.keys(q.showIf).every(k => st.answers[k] === q.showIf[k]);
+}
+
+function renderQuestion(flow){
+  const qs = FLOWS[flow];
+  const st = STATE[flow];
+  const card = document.getElementById('qc-'+flow);
+
+  // auto-skip questions already answered via free-text extraction, or not applicable given prior answers
+  while(st.idx < qs.length && (
+    (st.prefilled && st.prefilled[qs[st.idx].key]) ||
+    !questionApplies(flow, qs[st.idx])
+  )){
+    st.idx++;
+  }
+
+  if(st.idx >= qs.length){
+    // all questions answered
+    card.innerHTML = '';
+    if(flow==='setup'){
+      finalizeSetup();
+    } else {
+      showRunButton(flow);
+    }
+    return;
+  }
+
+  const q = qs[st.idx];
+  const existing = st.answers[q.key] !== undefined ? st.answers[q.key] : q.default;
+
+  let inner = '<div class="ql">'+q.label+'</div><div class="qt">'+q.text+'</div>';
+  if(q.sub) inner += '<div class="qs">'+q.sub+'</div>';
+
+  if(q.type === 'choice'){
+    inner += '<div class="pg" id="pg-'+flow+'-'+q.key+'">';
+    q.options.forEach(opt=>{
+      const isOn = q.multi ? (Array.isArray(existing) && existing.includes(opt)) : (existing===opt);
+      const label = q.display ? (q.display[opt]||opt) : opt;
+      inner += '<button class="p'+(isOn?' on':'')+'" data-v="'+opt.replace(/"/g,'&quot;')+'">'+label+'</button>';
+    });
+    inner += '</div>';
+  } else if(q.type === 'textarea'){
+    inner += '<textarea class="fi" id="fi-'+flow+'-'+q.key+'" placeholder="'+(q.placeholder||'')+'">'+(existing||'')+'</textarea>';
+  } else {
+    inner += '<input class="fi" id="fi-'+flow+'-'+q.key+'" placeholder="'+(q.placeholder||'')+'" value="'+(existing||'').replace(/"/g,'&quot;')+'">';
+  }
+
+  inner += '<div class="qnav">';
+  inner += '<button class="cta" id="next-'+flow+'" onclick="advance(\''+flow+'\')">Next <span class="arr">\u2192</span></button>';
+  if(st.idx>0 || (flow!=='setup')) inner += '<button class="back-link" onclick="goBack(\''+flow+'\')">back</button>';
+  inner += '</div>';
+
+  card.innerHTML = inner;
+
+  if(q.type === 'choice'){
+    const wrap = document.getElementById('pg-'+flow+'-'+q.key);
+    wrap.querySelectorAll('.p').forEach(b=>{
+      b.addEventListener('click', ()=>{
+        if(q.multi){
+          b.classList.toggle('on');
+          const sel = [...wrap.querySelectorAll('.p.on')];
+          if(q.max && sel.length>q.max){ b.classList.remove('on'); }
+        } else {
+          wrap.querySelectorAll('.p').forEach(x=>x.classList.remove('on'));
+          b.classList.add('on');
+          advance(flow); // auto-advance on single-select tap
+        }
+      });
+    });
+  } else {
+    const fi = document.getElementById('fi-'+flow+'-'+q.key);
+    fi.focus();
+    fi.addEventListener('keydown', (e)=>{
+      if(e.key==='Enter' && q.type!=='textarea'){ e.preventDefault(); advance(flow); }
+    });
+  }
+}
+
+function collectAnswer(flow){
+  const qs = FLOWS[flow];
+  const st = STATE[flow];
+  const q = qs[st.idx];
+  if(q.type === 'choice'){
+    const wrap = document.getElementById('pg-'+flow+'-'+q.key);
+    const sel = [...wrap.querySelectorAll('.p.on')].map(b=>b.dataset.v);
+    if(q.multi) return sel.length ? sel : (q.default||[]);
+    return sel[0] || q.default;
+  } else {
+    const fi = document.getElementById('fi-'+flow+'-'+q.key);
+    return fi.value.trim() || q.default || '';
+  }
+}
+
+function advance(flow){
+  const qs = FLOWS[flow];
+  const st = STATE[flow];
+  const q = qs[st.idx];
+  st.answers[q.key] = collectAnswer(flow);
+  st.idx++;
+  renderTranscript(flow);
+  renderQuestion(flow);
+  window.scrollTo({top:document.body.scrollHeight, behavior:'smooth'});
+}
+
+function goBack(flow){
+  const st = STATE[flow];
+  const qs = FLOWS[flow];
+  if(st.idx>0){
+    st.idx--;
+    while(st.idx>0 && (
+      (st.prefilled && st.prefilled[qs[st.idx].key]) ||
+      !questionApplies(flow, qs[st.idx])
+    )){
+      st.idx--;
+    }
+    renderTranscript(flow);
+    renderQuestion(flow);
+  }
+}
+
+function finalizeSetup(){
+  W.p1 = STATE.setup.answers.p1 || 'Partner 1';
+  W.p2 = STATE.setup.answers.p2 || 'Partner 2';
+  W.tr = STATE.setup.answers.tr || [];
+  W.sz = STATE.setup.answers.sz || '';
+  W.loc = STATE.setup.answers.loc || '';
+  W.bud = STATE.setup.answers.bud || '';
+  W.dt = STATE.setup.answers.dt || '';
+  W.obs = STATE.setup.answers.obs || '';
+  W.ready = true;
+  ['tab-cie','tab-vendor','tab-inquiry','tab-guest'].forEach(id=>document.getElementById(id).disabled=false);
+  syncCtx();
+  document.getElementById('qc-setup').innerHTML = '<div class="qt" style="margin-bottom:18px">All set, '+W.p1+' & '+W.p2+'.</div><button class="cta" onclick="goTab(\'cie\',1,document.querySelectorAll(\'.tab\')[1])">See your plan <span class="arr">\u2192</span></button>';
+}
+
+function showRunButton(flow){
+  let label = {cie:'Generate my plan', vendor:'Find vendors', inquiry:'Draft my message', guest:'Draft message'}[flow];
+  if(flow==='vendor' && STATE.vendor.answers.source==='bring my own'){
+    label = 'Send invite';
+  }
+  const card = document.getElementById('qc-'+flow);
+  card.innerHTML = '<button class="cta" id="run-'+flow+'" onclick="runFlow(\''+flow+'\')">'+label+' <span class="arr">\u2192</span></button>'+
+    '<div style="margin-top:14px"><button class="back-link" onclick="goBack(\''+flow+'\')">edit answers</button></div>';
+}
+
+/* ============ TAB SWITCHING ============ */
+function setDots(i){
+  [0,1,2,3].forEach(j=>{
+    const d=document.getElementById('d'+j);
+    d.className='dot';
+    if(j<i)d.classList.add('done');
+    if(j===i)d.classList.add('now');
+  });
+}
+
+function goTab(id, di, tabEl){
+  if(id!=='setup' && id!=='intro' && !W.ready) return;
+  ['intro','setup','cie','vendor','inquiry','guest'].forEach(x=>{
+    const el=document.getElementById('s-'+x);
+    if(el){el.style.display='none';el.classList.remove('on');}
+  });
+  const el=document.getElementById('s-'+id);
+  if(el){el.style.display='block';el.classList.add('on');}
+  document.querySelectorAll('.tab').forEach(t=>t.classList.remove('on'));
+  if(tabEl) tabEl.classList.add('on');
+  setDots(di);
+  syncCtx();
+  if(id!=='setup'){
+    renderTranscript(id);
+    renderQuestion(id);
+  }
+  window.scrollTo(0,0);
+}
+
+function syncCtx(){
+  if(!W.ready) return;
+  const sum=W.p1+' & '+W.p2+' \u00b7 '+W.tr.join(' + ')+' \u00b7 '+W.sz.split('(')[0].trim()+' \u00b7 '+W.loc.replace('Destination \u2014 ','')+' \u00b7 '+W.dt;
+  ['cie','vendor','inquiry','guest'].forEach(id=>{
+    const elc=document.getElementById('ctx-'+id);
+    if(!elc)return;
+    elc.innerHTML=sum+'<button class="ctx-edit" onclick="goTab(\'setup\',0,document.querySelectorAll(\'.tab\')[0])">edit details</button>';
+  });
+}
+
+/* ============ MARKDOWN RENDERER ============ */
+function renderMD(src){
+  if(!src) return '';
+  let s = src.replace(/\r\n/g,'\n');
+  s = s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+
+  const lines = s.split('\n');
+  let html = '';
+  let i = 0;
+  let inList = null;
+
+  function closeList(){
+    if(inList){ html += inList==='ul' ? '</ul>' : '</ol>'; inList = null; }
+  }
+
+  function inline(t){
+    t = t.replace(/\*\*\*(.+?)\*\*\*/g, '<strong><em>$1</em></strong>');
+    t = t.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
+    t = t.replace(/\*(.+?)\*/g, '<em>$1</em>');
+    t = t.replace(/`([^`]+)`/g, '<code>$1</code>');
+    return t;
+  }
+
+  while(i < lines.length){
+    let line = lines[i];
+
+    if(/^\s*\|.+\|\s*$/.test(line) && lines[i+1] && /^\s*\|?[\s:|-]+\|\s*$/.test(lines[i+1])){
+      closeList();
+      const headCells = line.trim().replace(/^\||\|$/g,'').split('|').map(c=>c.trim());
+      let body = [];
+      i += 2;
+      while(i < lines.length && /^\s*\|.+\|\s*$/.test(lines[i])){
+        body.push(lines[i].trim().replace(/^\||\|$/g,'').split('|').map(c=>c.trim()));
+        i++;
+      }
+      html += '<div class="out-table-wrap"><table><thead><tr>' +
+        headCells.map(c=>'<th>'+inline(c)+'</th>').join('') +
+        '</tr></thead><tbody>' +
+        body.map(r=>'<tr>'+r.map(c=>'<td>'+inline(c)+'</td>').join('')+'</tr>').join('') +
+        '</tbody></table></div>';
+      continue;
+    }
+
+    let m;
+    if((m = /^###\s+(.*)$/.exec(line))){ closeList(); html += '<h3>'+inline(m[1])+'</h3>'; i++; continue; }
+    if((m = /^##\s+(.*)$/.exec(line))){ closeList(); html += '<h2>'+inline(m[1])+'</h2>'; i++; continue; }
+    if((m = /^#\s+(.*)$/.exec(line))){ closeList(); html += '<h1>'+inline(m[1])+'</h1>'; i++; continue; }
+
+    if(/^\s*---+\s*$/.test(line)){ closeList(); html += '<hr>'; i++; continue; }
+
+    if((m = /^\s*[-*]\s+(.*)$/.exec(line))){
+      if(inList !== 'ul'){ closeList(); html += '<ul>'; inList = 'ul'; }
+      html += '<li>'+inline(m[1])+'</li>';
+      i++; continue;
+    }
+
+    if((m = /^\s*\d+\.\s+(.*)$/.exec(line))){
+      if(inList !== 'ol'){ closeList(); html += '<ol>'; inList = 'ol'; }
+      html += '<li>'+inline(m[1])+'</li>';
+      i++; continue;
+    }
+
+    if(/^\s*$/.test(line)){ closeList(); i++; continue; }
+
+    closeList();
+    let para = [line];
+    i++;
+    while(i < lines.length && lines[i].trim() !== '' &&
+          !/^#{1,3}\s/.test(lines[i]) && !/^\s*[-*]\s/.test(lines[i]) &&
+          !/^\s*\d+\.\s/.test(lines[i]) && !/^\s*\|.+\|\s*$/.test(lines[i]) &&
+          !/^\s*---+\s*$/.test(lines[i])){
+      para.push(lines[i]); i++;
+    }
+    html += '<p>'+inline(para.join(' '))+'</p>';
+  }
+  closeList();
+  return html;
+}
+
+/* ============ CONTEXT STRING FOR PROMPTS ============ */
+function ctx(){
+  const isIF = W.tr.length>1;
+  const isDest = W.loc.toLowerCase().includes('destination');
+  return ['WEDDING CONTEXT:','Couple: '+W.p1+' and '+W.p2,'Traditions: '+W.tr.join(' + ')+(isIF?' \u2014 INTERFAITH WEDDING':''),'Size: '+W.sz,'Budget: '+W.bud,'Date: '+W.dt,'Location: '+W.loc,'Observance: '+W.obs,
+    isDest?'DESTINATION WEDDING \u2014 apply all destination checks: legal marriage recognition, visa requirements for international guests, travel advisory monitoring, Stripe market availability, currency risk.':'',
+    isIF?'INTERFAITH WEDDING \u2014 include a "Conflict flags" section: decisions the couple must make together, framed as choices not problems.':''
+  ].filter(Boolean).join('\n');
+}
+
+/* ============ API CALL ============ */
+async function ask(sys,usr,resId,outId,btnId,lbl){
+  const btn=document.getElementById(btnId);
+  const out=document.getElementById(outId);
+  const res=document.getElementById(resId);
+  if(btn){btn.disabled=true; btn.innerHTML='Thinking\u2026 <span class="arr">\u00b7</span>';}
+  out.style.display='block';
+  res.className='out-body spin';
+  res.textContent='Writing\u2026';
+  try{
+    const r=await fetch('/api/chat',{
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({model:'claude-sonnet-4-6',max_tokens:1000,system:sys,messages:[{role:'user',content:usr}]})
+    });
+    if(!r.ok){
+      const txt=await r.text();
+      throw new Error('Server responded with '+r.status+': '+txt.slice(0,120));
+    }
+    const d=await r.json();
+    if(d.error)throw new Error(d.error.message);
+    res.className='out-body';
+    const raw=(d.content||[]).map(b=>b.text||'').join('');
+    res.innerHTML=renderMD(raw);
+  }catch(e){
+    res.className='out-body';
+    res.innerHTML='<p style="color:var(--muted);font-style:italic">\u26a0 '+String(e.message).replace(/&/g,'&amp;').replace(/</g,'&lt;')+'</p>';
+  }
+  if(btn){btn.disabled=false; btn.innerHTML=lbl+' <span class="arr">\u2192</span>';}
+  out.scrollIntoView({behavior:'smooth', block:'start'});
+}
+
+/* ============ BRING YOUR OWN VENDOR: invite generation ============ */
+function runByoInvite(a){
+  const ey = document.getElementById('vm-ey');
+  ey.textContent = 'Your invite \u2014 review before sending';
+
+  const displayName = a.byo_business ? (a.byo_name+' \u2014 '+a.byo_business) : a.byo_name;
+  const catLabel = (FLOWS.vendor.find(q=>q.key==='cat').display||{})[a.cat] || a.cat;
+
+  const sys = `You are the Marigold Inquiry Drafter, generating a first invite to a vendor the couple already knows and wants to bring onto Marigold.\nRULES:\n1. This is an INVITE, not a cold inquiry \u2014 the couple already has a relationship with this person. Reference how the couple found them naturally (the "source" given).\n2. Warm, personal, genuine \u2014 never salesy or templated.\n3. Briefly explain Marigold in one sentence: a culturally-intelligent wedding marketplace connecting couples with vendors who understand their traditions.\n4. Include the event name, date, guest count, and budget range so they immediately understand the opportunity.\n5. Maximum 150 words.\n6. Never open with "I hope this email finds you well."\n7. End with: [Review before sending \u2014 personalise the opening and confirm all details]\nAfter the draft, add one line: Cultural details included: (one line, or "none" if not applicable)`;
+
+  const usr = ctx()+'\n\nVENDOR/PLANNER NAME: '+displayName+'\nCATEGORY: '+catLabel+'\nHOW WE FOUND THEM: '+a.byo_source+
+    (a.byo_notes ? '\nNOTES FROM COUPLE: '+a.byo_notes : '')+
+    '\n\nDraft a warm invite asking them to join Marigold for our wedding.';
+
+  ask(sys, usr, 'vm-res', 'vm-out', 'run-vendor', 'Send invite');
+
+  // record-style confirmation card, mirroring the vendor/planner tracker fields
+  const restartEl = document.getElementById('vm-card-restart');
+  restartEl.style.display = 'block';
+  restartEl.innerHTML =
+    '<div class="extracted-note" style="text-align:left;margin-top:24px">'+
+    '<strong style="color:var(--deep)">Added to your vendor list</strong><br>'+
+    'Name: '+displayName+'<br>'+
+    'Category: '+catLabel+'<br>'+
+    (a.byo_email ? 'Email: '+a.byo_email+'<br>' : '')+
+    (a.byo_instagram ? 'Instagram/website: '+a.byo_instagram+'<br>' : '')+
+    'Source: '+a.byo_source+'<br>'+
+    'Status: Invited'+
+    '</div>';
+}
+
+
+function runFlow(flow){
+  const a = STATE[flow].answers;
+  if(flow==='cie'){
+    const sys=`You are the Marigold Cultural Intelligence Engine.\nRULES:\n1. Draw only from culturally verified information. Where uncertain say "confirm with your officiant and family."\n2. Never suggest one tradition takes priority over another.\n3. Size-aware: Micro/intimate = shorter checklist, experience-first budget. Large/grand = delegation-first.\n4. Tariff: flag imported textiles (lehenga, aso-ebi) and florals (Indian marigolds, jasmine) as tariff-sensitive. Recommend price-lock deposits.\n5. Destination: flag marriage recognition at home country, visa requirements, travel advisories.\n6. Interfaith: include a "Conflict flags" section \u2014 decisions framed as choices not problems.\n7. Close with: "Confirm all ceremony details with your officiant and families before booking."\nFORMATTING: Use clean markdown. ## for section headings (sentence case). Use a real markdown table with | pipes for any budget breakdown. Use **bold** sparingly for key numbers or terms only. Short paragraphs. Bullet lists for checklist items.\nWrite in a warm editorial voice. Specific and useful.`;
+    ask(sys, ctx()+'\n\nFOCUS: '+a.focus+'\n\nGenerate the wedding plan.', 'cie-res','cie-out','run-cie','Generate my plan');
+  } else if(flow==='vendor'){
+    if(a.source === 'bring my own'){
+      runByoInvite(a);
+      return;
+    }
+    document.getElementById('vm-ey').textContent = 'Vendor recommendations';
+    document.getElementById('vm-card-restart').style.display = 'none';
+    document.getElementById('vm-card-restart').innerHTML = '';
+    const sys=`You are the Marigold Vendor Match Agent.\nRULES:\n1. Cultural fit is the primary criterion.\n2. Size-aware: only recommend vendors experienced at ${W.sz} scale.\n3. Reference real vendors from research where helpful:\n   NY/NJ: Mehndisha\u2014Nisha Sharma (mehndi), Tum Hi Ho Events\u2014Hiren (interfaith South Asian planner), Laksa Events (South Asian NJ), Events by Kae (Nigerian NY), Nimma Ovwori Weddings (Nigerian/Ghanaian NJ), Dave Robbins Photography, Beautini (hair & makeup), Designs by Ahn (florist), Cantor Laura Stein (interfaith officiant), Rabbi Ron Broden (interfaith officiant).\n   Chicago: VEK Photo\u2014Vinnie, Shan Photography, Rahul Rana Photography, Madison Elyse Events.\n   LA: Denise Lillie Engagements, Events by Mala, Rani Raja Weddings, Nahid Global Events.\n   Always label as "examples to verify current availability."\n4. Dietary: never suggest non-kosher for kosher vendors, non-halal for halal vendors.\n5. Flag tariff risks for imported florals, specialty ingredients, textiles.\nFormat: markdown with a ## heading per section (what to look for, example vendors, where to find more, key questions to ask, budget reality check). Bold vendor names only.`;
+    ask(sys, ctx()+'\n\nVENDOR: '+a.cat+'\nBUDGET: '+a.bud+'\nEVENT DATE: '+a.date, 'vm-res','vm-out','run-vendor','Find vendors');
+  } else if(flow==='inquiry'){
+    const diet = a.diet;
+    const sys=`You are the Marigold Inquiry Drafter.\nABSOLUTE RULES:\n1. DIETARY SAFETY \u2014 vendor certification: "${diet}". Kosher: NEVER mention pork, shellfish, or mixing meat/dairy. Halal: NEVER mention pork or alcohol. Zero exceptions.\n2. Maximum 160 words.\n3. Always include a price-lock question.\n4. One specific genuine detail about the vendor. Not flattery \u2014 specificity.\n5. Include event name, date, guest count, need, budget.\n6. Never open with "I hope this email finds you well."\n7. End with: [Review before sending \u2014 personalise the opening and confirm all details]\nAfter draft add:\nCultural details included: (one line)\nTariff note: (if relevant, otherwise omit)`;
+    ask(sys, ctx()+'\n\nVENDOR: '+a.name+'\nCATEGORY: '+a.cat+'\nDIETARY: '+diet+'\nEVENT: '+a.event+'\nDATE: '+a.date+'\nGUESTS: '+a.guests+'\nBUDGET: '+a.budget+'\n\nDraft the message.', 'inq-res','inq-out','run-inquiry','Draft my message');
+  } else if(flow==='guest'){
+    const sys=`You are the Marigold Guest Communication Agent.\nRULES:\n1. Never take sides between traditions. Represent both equally.\n2. Tone must be exactly: ${a.tone}. Match throughout.\n3. Cultural explanations: welcoming and educational, never make guests feel like outsiders.\n4. Never reference geopolitical tensions or religious conflicts.\n5. Write in the couple's voice \u2014 from ${W.p1} and ${W.p2}, not from a platform.\n6. End with: [Review before sending \u2014 add personal details and confirm all information]\nAfter draft: Cultural context included: (one line)`;
+    ask(sys, ctx()+'\n\nTYPE: '+a.type+'\nAUDIENCE: '+a.aud+'\nTONE: '+a.tone+'\nNOTES: '+(a.notes||'none')+'\n\nDraft the message.', 'gc-res','gc-out','run-guest','Draft message');
+  }
+}
+
+/* ============ INIT ============ */
+/* ============ INTRO SCREEN: choose path ============ */
+function renderIntro(){
+  const card = document.getElementById('qc-intro');
+  card.innerHTML =
+    '<div class="ql">Welcome</div>'+
+    '<div class="qt">Tell us about the wedding you\u2019re envisioning.</div>'+
+    '<div class="qs">Share as much or as little as you like \u2014 we\u2019ll fill in the rest together.</div>'+
+    '<div class="choice-cards">'+
+      '<button class="choice-card" onclick="chooseFreeText()">'+
+        '<div class="cc-title">I\u2019ll describe it</div>'+
+        '<div class="cc-sub">Write freely about your traditions, guests, budget, location \u2014 whatever you have in mind. We\u2019ll ask about anything important you leave out.</div>'+
+      '</button>'+
+      '<button class="choice-card" onclick="chooseGuided()">'+
+        '<div class="cc-title">Guide me through it</div>'+
+        '<div class="cc-sub">Answer a short series of simple questions, one at a time. Takes about two minutes.</div>'+
+      '</button>'+
+    '</div>';
+}
+
+function chooseGuided(){
+  goTabRaw('setup');
+  STATE.setup.idx = 0;
+  STATE.setup.prefilled = {};
+  renderTranscript('setup');
+  renderQuestion('setup');
+}
+
+function chooseFreeText(){
+  const card = document.getElementById('qc-intro');
+  card.innerHTML =
+    '<div class="ql">Tell us everything</div>'+
+    '<div class="qt">What\u2019s your vision?</div>'+
+    '<div class="free-hint">For example: names, the traditions you\u2019re blending, roughly how many guests, where, your budget range, and when. Write it like you\u2019re telling a friend.</div>'+
+    '<textarea class="free-area" id="free-text" placeholder="We\u2019re Rachel and Arjun \u2014 I\u2019m Jewish, he\u2019s Hindu (Punjabi). We\u2019re thinking around 120 guests in the New York area next June, budget somewhere around $75,000. Both families are moderately observant and we want both ceremonies represented..."></textarea>'+
+    '<div class="qnav">'+
+      '<button class="cta" id="extract-btn" onclick="extractFromFreeText()">Continue <span class="arr">\u2192</span></button>'+
+      '<button class="back-link" onclick="renderIntro()">back</button>'+
+    '</div>';
+  document.getElementById('free-text').focus();
+}
+
+function goTabRaw(id){
+  ['intro','setup','cie','vendor','inquiry','guest'].forEach(x=>{
+    const el=document.getElementById('s-'+x);
+    if(el){el.style.display='none';el.classList.remove('on');}
+  });
+  const el=document.getElementById('s-'+id);
+  if(el){el.style.display='block';el.classList.add('on');}
+}
+
+async function extractFromFreeText(){
+  const text = document.getElementById('free-text').value.trim();
+  if(!text){ chooseGuided(); return; }
+
+  const btn = document.getElementById('extract-btn');
+  btn.disabled = true;
+  btn.innerHTML = 'Reading\u2026 <span class="arr">\u00b7</span>';
+
+  const sys = `You extract structured wedding-planning details from free text. Respond with ONLY a single valid JSON object, no markdown fences, no commentary.
+Fields to extract (use null for any not mentioned or unclear \u2014 do not guess):
+{
+  "p1": string or null (first partner's first name),
+  "p2": string or null (second partner's first name),
+  "tr": array of up to 2 strings or null \u2014 choose only from this exact list: ["Hindu (North Indian / Punjabi)","Jewish (Reform / Conservative)","Muslim (Nikah)","Nigerian (Yoruba)","Nigerian (Igbo)","Sikh","Western / Civil","Chinese / Taiwanese"],
+  "sz": string or null \u2014 choose only from: ["Micro (under 20 guests)","Intimate (20\u201375 guests)","Mid-size (75\u2013200 guests)","Large (200\u2013500 guests)","Grand (500+ guests)"],
+  "loc": string or null \u2014 choose only from: ["New York / New Jersey","Chicago","Los Angeles","Destination \u2014 Italy","Destination \u2014 India","Destination \u2014 Nigeria","Destination \u2014 Morocco","Destination \u2014 Bali","Destination \u2014 Israel"] (if a destination is mentioned that isn't in this list, pick the closest match or null),
+  "bud": string or null \u2014 choose only from: ["under $25,000","$25,000\u2013$50,000","$50,000\u2013$100,000","$100,000\u2013$200,000","$200,000+"],
+  "dt": string or null (the date or timeframe as the user wrote it, e.g. "June 2026"),
+  "obs": string or null \u2014 choose only from: ["cultural / secular","moderately observant","strictly observant"]
+}
+Only fill a field if it is reasonably clear from the text. Leave ambiguous or unmentioned fields as null.`;
+
+  try{
+    const r = await fetch('/api/chat', {
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({model:'claude-sonnet-4-6', max_tokens:500, system:sys, messages:[{role:'user', content:text}]})
+    });
+    if(!r.ok) throw new Error('Server responded with '+r.status);
+    const d = await r.json();
+    if(d.error) throw new Error(d.error.message);
+    const raw = (d.content||[]).map(b=>b.text||'').join('').trim();
+    const jsonStr = raw.replace(/^```json\s*/i,'').replace(/^```\s*/,'').replace(/```\s*$/,'').trim();
+    const parsed = JSON.parse(jsonStr);
+    applyExtracted(parsed, text);
+  } catch(e){
+    // graceful fallback: just go to guided flow if extraction fails
+    goTabRaw('setup');
+    STATE.setup.idx = 0;
+    STATE.setup.prefilled = {};
+    document.getElementById('qc-setup').innerHTML =
+      '<div class="extracted-note">We couldn\u2019t quite parse that automatically, so let\u2019s go through it together instead.</div>';
+    setTimeout(()=>{ renderTranscript('setup'); renderQuestion('setup'); }, 900);
+  }
+}
+
+function applyExtracted(parsed, originalText){
+  const norm = s => String(s).replace(/[\u2010-\u2015]/g, '-').trim().toLowerCase();
+
+  const validOptions = {
+    sz: FLOWS.setup.find(q=>q.key==='sz').options,
+    loc: FLOWS.setup.find(q=>q.key==='loc').options,
+    bud: FLOWS.setup.find(q=>q.key==='bud').options,
+    obs: FLOWS.setup.find(q=>q.key==='obs').options,
+    tr: FLOWS.setup.find(q=>q.key==='tr').options
+  };
+
+  function matchOption(val, optionsList){
+    if(typeof val !== 'string') return null;
+    const target = norm(val);
+    return optionsList.find(o => norm(o) === target) || null;
+  }
+
+  STATE.setup.idx = 0;
+  STATE.setup.answers = {};
+  STATE.setup.prefilled = {};
+
+  let filledCount = 0;
+  let missingLabels = [];
+
+  FLOWS.setup.forEach(q=>{
+    const val = parsed[q.key];
+    let ok = false;
+    if(q.key==='tr' && Array.isArray(val) && val.length){
+      const cleaned = val.map(v=>matchOption(v, validOptions.tr)).filter(Boolean).slice(0,2);
+      if(cleaned.length){ STATE.setup.answers.tr = cleaned; ok = true; }
+    } else if(['sz','loc','bud','obs'].includes(q.key) && val){
+      const matched = matchOption(val, validOptions[q.key]);
+      if(matched){ STATE.setup.answers[q.key] = matched; ok = true; }
+    } else if(['p1','p2','dt'].includes(q.key) && typeof val==='string' && val.trim()){
+      STATE.setup.answers[q.key] = val.trim(); ok = true;
+    }
+    if(ok){ STATE.setup.prefilled[q.key] = true; filledCount++; }
+    else { missingLabels.push(q.text); }
+  });
+
+  goTabRaw('setup');
+  const noteHTML = missingLabels.length
+    ? '<div class="extracted-note">Got it \u2014 we picked up '+filledCount+' of '+FLOWS.setup.length+' details. Just a couple more things to confirm.</div>'
+    : '<div class="extracted-note">Got it \u2014 we picked up everything we need from that.</div>';
+
+  renderTranscript('setup');
+  renderQuestion('setup');
+  document.getElementById('qc-setup').insertAdjacentHTML('afterbegin', noteHTML);
+}
+
+/* ============ INIT ============ */
+renderIntro();
+</script>
+</body>
+</html>
