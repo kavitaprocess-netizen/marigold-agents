@@ -269,7 +269,7 @@ textarea.fi{border:1px solid var(--bdr);border-radius:8px;padding:12px 14px;resi
 
 <script>
 /* ============ DATA MODEL ============ */
-const W={p1:'',p2:'',tr:[],sz:'',loc:'',bud:'',dt:'',obs:'',ready:false,shouldAutoGeneratePlan:false};
+const W={p1:'',p2:'',tr:[],hinduRegion:'',sz:'',loc:'',bud:'',dt:'',obs:'',ready:false,shouldAutoGeneratePlan:false};
 
 /* Per-flow question definitions. Each question: {key, label(eyebrow), text, type, options?, placeholder?, default?, multi?, max?}
    type: 'choice' | 'text' | 'textarea' */
@@ -278,8 +278,11 @@ const FLOWS = {
     {key:'p1', label:'Begin here', text:'What\u2019s your first name?', type:'text', placeholder:'Your first name', default:'Rachel'},
     {key:'p2', label:'Begin here', text:'And your partner\u2019s first name?', type:'text', placeholder:'Partner\u2019s first name', default:'Arjun'},
     {key:'tr', label:'Traditions', text:'Which traditions are you celebrating?', sub:'Choose up to two \u2014 we blend them thoughtfully.', type:'choice', multi:true, max:2, options:[
-      'Hindu (North Indian / Punjabi)','Jewish (Reform / Conservative)','Muslim (Nikah)','Nigerian (Yoruba)','Nigerian (Igbo)','Sikh','Western / Civil','Chinese / Taiwanese'
-    ], default:['Hindu (North Indian / Punjabi)','Jewish (Reform / Conservative)']},
+      'Hindu','Jewish (Reform / Conservative)','Muslim (Nikah)','Nigerian (Yoruba)','Nigerian (Igbo)','Sikh','Western / Civil','Chinese / Taiwanese'
+    ], default:['Hindu','Jewish (Reform / Conservative)']},
+    {key:'hindu_region', label:'Hindu traditions', text:'Which regional tradition is closest to yours?', sub:'Rituals, attire, and food vary a lot by region \u2014 this helps us get the details right.', type:'choice', options:[
+      'North Indian / Punjabi','Rajasthani','Gujarati','Bengali','Tamil','Telugu','Kannada / Karnataka','Marathi','Other / blend of regions'
+    ], default:'North Indian / Punjabi', showIfFn:(answers)=> Array.isArray(answers.tr) && answers.tr.includes('Hindu')},
     {key:'sz', label:'Guest count', text:'How many guests are you imagining?', type:'choice', options:[
       'Micro (under 20 guests)','Intimate (20\u201375 guests)','Mid-size (75\u2013200 guests)','Large (200\u2013500 guests)','Grand (500+ guests)'
     ], display:{'Micro (under 20 guests)':'Under 20 \u2014 just us','Intimate (20\u201375 guests)':'20\u201375 \u2014 close family','Mid-size (75\u2013200 guests)':'75\u2013200','Large (200\u2013500 guests)':'200\u2013500','Grand (500+ guests)':'500+ \u2014 grand celebration'}, default:'Mid-size (75\u2013200 guests)'},
@@ -416,8 +419,9 @@ function jumpTo(flow, i){
 }
 
 function questionApplies(flow, q){
-  if(!q.showIf) return true;
   const st = STATE[flow];
+  if(q.showIfFn) return q.showIfFn(st.answers);
+  if(!q.showIf) return true;
   return Object.keys(q.showIf).every(k => st.answers[k] === q.showIf[k]);
 }
 
@@ -567,6 +571,7 @@ function finalizeSetup(){
   W.p1 = STATE.setup.answers.p1 || 'Partner 1';
   W.p2 = STATE.setup.answers.p2 || 'Partner 2';
   W.tr = STATE.setup.answers.tr || [];
+  W.hinduRegion = STATE.setup.answers.hindu_region || '';
   W.sz = STATE.setup.answers.sz || '';
   W.loc = STATE.setup.answers.loc || '';
   W.bud = STATE.setup.answers.bud || '';
@@ -797,7 +802,8 @@ function renderMD(src, opts){
 function ctx(){
   const isIF = W.tr.length>1;
   const isDest = W.loc.toLowerCase().includes('destination');
-  return ['WEDDING CONTEXT:','Couple: '+W.p1+' and '+W.p2,'Traditions: '+W.tr.join(' + ')+(isIF?' \u2014 INTERFAITH WEDDING':''),'Size: '+W.sz,'Budget: '+W.bud,'Date: '+W.dt,'Location: '+W.loc,'Observance: '+W.obs,
+  const tradLine = W.tr.map(t => (t==='Hindu' && W.hinduRegion) ? 'Hindu ('+W.hinduRegion+')' : t).join(' + ');
+  return ['WEDDING CONTEXT:','Couple: '+W.p1+' and '+W.p2,'Traditions: '+tradLine+(isIF?' \u2014 INTERFAITH WEDDING':''),'Size: '+W.sz,'Budget: '+W.bud,'Date: '+W.dt,'Location: '+W.loc,'Observance: '+W.obs,
     isDest?'DESTINATION WEDDING \u2014 apply all destination checks: legal marriage recognition, visa requirements for international guests, travel advisory monitoring, Stripe market availability, currency risk.':'',
     isIF?'INTERFAITH WEDDING \u2014 include a "Conflict flags" section: decisions the couple must make together, framed as choices not problems.':''
   ].filter(Boolean).join('\n');
@@ -894,17 +900,20 @@ RULES:
 6. Interfaith: include a "Conflict flags" section \u2014 decisions framed as choices not problems.
 7. Close with: "Confirm all ceremony details with your officiant and families before booking."
 
-FORMATTING \u2014 this must read like a scannable planning document, not an essay:
-- Every section opens with ## and a short sentence-case heading.
-- NO long paragraphs anywhere, including the overview. Maximum 2 sentences per paragraph. If you have more to say, break it into a bulleted list instead of a paragraph.
-- Prefer bullet points over prose wherever there is a list of items, options, or considerations \u2014 which is most of this content.
-- Use a real markdown table with | pipes for any budget breakdown. Every row, including header and separator, is exactly one line, no blank lines between rows, short cell contents.
-- Use **bold** only for key numbers, dates, or single important terms \u2014 never whole sentences.
-- ALWAYS include one section with the exact heading "## Checklist" containing a flat bullet list (- item) of concrete, actionable to-do items \u2014 no nested sub-bullets, no sub-headings inside that section.
-- Total length: aim for something a person can skim in under a minute, not read end to end. When in doubt, cut prose and convert to bullets.
+STRUCTURE \u2014 follow this exactly, with these hard caps. Do not exceed any cap, even if it means leaving out detail you'd otherwise include:
+## Overview (max 3 sentences total, no bullets needed here)
+## Budget framework (a markdown table, max 8 rows of line items \u2014 the most important categories only, not an exhaustive list. One sentence max before the table.)
+## Ceremony sequence (bulleted list, max 6 bullets, one line each)
+## Vendor priorities (bulleted list, max 6 bullets, one line each \u2014 which vendors to book first and why, in priority order)
+## Conflict flags (only if interfaith \u2014 bulleted list, max 4 bullets, one line each)
+## Checklist (bulleted list, max 8 items, one line each, concrete and actionable)
+
+Every table row (header, separator, every data row) is exactly one line, no blank lines between rows, short cell contents. Use **bold** only for key numbers or terms, never whole sentences. If FOCUS below asks for only one of these sections, output only that section in full \u2014 do not include the others at all.
+
+This is a skimmable reference, not a document to read end to end. When in doubt, cut rather than add.
 
 Tone: warm but brief. Specific and useful over eloquent.`;
-    ask(sys, ctx()+'\n\nFOCUS: '+a.focus+'\n\nGenerate the wedding plan.', 'cie-res','cie-out','run-cie','Generate my plan', {checklistMode:true, idPrefix:'cie'}, 'cie', 3000);
+    ask(sys, ctx()+'\n\nFOCUS: '+a.focus+'\n\nGenerate the wedding plan.', 'cie-res','cie-out','run-cie','Generate my plan', {checklistMode:true, idPrefix:'cie'}, 'cie', 4000);
   } else if(flow==='vendor'){
     if(a.source === 'bring my own'){
       runByoInvite(a);
@@ -913,7 +922,26 @@ Tone: warm but brief. Specific and useful over eloquent.`;
     document.getElementById('vm-ey').textContent = 'Vendor recommendations';
     document.getElementById('vm-card-restart').style.display = 'none';
     document.getElementById('vm-card-restart').innerHTML = '';
-    const sys=`You are the Marigold Vendor Match Agent.\nRULES:\n1. Cultural fit is the primary criterion.\n2. Size-aware: only recommend vendors experienced at ${W.sz} scale.\n3. Reference real vendors from research where helpful:\n   NY/NJ: Mehndisha\u2014Nisha Sharma (mehndi), Tum Hi Ho Events\u2014Hiren (interfaith South Asian planner), Laksa Events (South Asian NJ), Events by Kae (Nigerian NY), Nimma Ovwori Weddings (Nigerian/Ghanaian NJ), Dave Robbins Photography, Beautini (hair & makeup), Designs by Ahn (florist), Cantor Laura Stein (interfaith officiant), Rabbi Ron Broden (interfaith officiant).\n   Chicago: VEK Photo\u2014Vinnie, Shan Photography, Rahul Rana Photography, Madison Elyse Events.\n   LA: Denise Lillie Engagements, Events by Mala, Rani Raja Weddings, Nahid Global Events.\n   Always label as "examples to verify current availability."\n4. Dietary: never suggest non-kosher for kosher vendors, non-halal for halal vendors.\n5. Flag tariff risks for imported florals, specialty ingredients, textiles.\nFormat: markdown with a ## heading per section (what to look for, example vendors, where to find more, key questions to ask, budget reality check). Bold vendor names only.`;
+    const sys=`You are the Marigold Vendor Match Agent.
+RULES:
+1. Cultural fit is the primary criterion.
+2. Size-aware: only recommend vendors experienced at ${W.sz} scale.
+3. Reference real vendors from research where helpful:
+   NY/NJ: Mehndisha\u2014Nisha Sharma (mehndi), Tum Hi Ho Events\u2014Hiren (interfaith South Asian planner), Laksa Events (South Asian NJ), Events by Kae (Nigerian NY), Nimma Ovwori Weddings (Nigerian/Ghanaian NJ), Dave Robbins Photography, Beautini (hair & makeup), Designs by Ahn (florist), Cantor Laura Stein (interfaith officiant), Rabbi Ron Broden (interfaith officiant).
+   Chicago: VEK Photo\u2014Vinnie, Shan Photography, Rahul Rana Photography, Madison Elyse Events.
+   LA: Denise Lillie Engagements, Events by Mala, Rani Raja Weddings, Nahid Global Events.
+   Always label as "examples to verify current availability."
+4. Dietary: never suggest non-kosher for kosher vendors, non-halal for halal vendors.
+5. Flag tariff risks for imported florals, specialty ingredients, textiles.
+
+STRUCTURE \u2014 follow exactly, with these hard caps. Do not exceed any cap:
+## What to look for (bulleted list, max 4 bullets, one line each \u2014 not a paragraph)
+## Vendors to consider (bulleted list, max 4 vendors. Each bullet: **Name** \u2014 one line reason, nothing more. No sub-bullets, no extra detail per vendor.)
+## Where to find more (max 2 sentences)
+## Questions to ask (bulleted list, max 4 bullets, one line each)
+## Budget reality check (max 2 sentences, mention one concrete number)
+
+No paragraph anywhere should exceed 2 sentences. This is a skimmable reference, not an essay \u2014 when in doubt, cut rather than add.`;
     ask(sys, ctx()+'\n\nVENDOR: '+a.cat+'\nBUDGET: '+a.bud+'\nEVENT DATE: '+a.date, 'vm-res','vm-out','run-vendor','Find vendors', null, 'vendor', 1200);
   } else if(flow==='inquiry'){
     const diet = a.diet;
@@ -1008,7 +1036,8 @@ Fields to extract (use null for any not mentioned or unclear \u2014 do not guess
 {
   "p1": string or null (first partner's first name),
   "p2": string or null (second partner's first name),
-  "tr": array of up to 2 strings or null \u2014 choose only from this exact list, copied verbatim: ["Hindu (North Indian / Punjabi)","Jewish (Reform / Conservative)","Muslim (Nikah)","Nigerian (Yoruba)","Nigerian (Igbo)","Sikh","Western / Civil","Chinese / Taiwanese"],
+  "tr": array of up to 2 strings or null \u2014 choose only from this exact list, copied verbatim: ["Hindu","Jewish (Reform / Conservative)","Muslim (Nikah)","Nigerian (Yoruba)","Nigerian (Igbo)","Sikh","Western / Civil","Chinese / Taiwanese"],
+  "hindu_region": string or null \u2014 ONLY fill this if "Hindu" is in "tr" AND the text mentions a specific regional or linguistic community (e.g. "Tamil", "Bengali", "Punjabi", "Rajasthani", "Gujarati", "Telugu", "Marathi", "Kannada"). Choose only from this exact list, copied verbatim: ["North Indian / Punjabi","Rajasthani","Gujarati","Bengali","Tamil","Telugu","Kannada / Karnataka","Marathi","Other / blend of regions"]. If Hindu is mentioned with no regional detail at all, return null \u2014 do not default to North Indian / Punjabi.
   "sz": string or null \u2014 choose only from this exact list, copied verbatim: ["Micro (under 20 guests)","Intimate (20\u201375 guests)","Mid-size (75\u2013200 guests)","Large (200\u2013500 guests)","Grand (500+ guests)"],
   "loc": string or null \u2014 choose only from this exact list, copied verbatim: ["New York / New Jersey","Chicago","Los Angeles","Destination \u2014 Italy","Destination \u2014 India","Destination \u2014 Nigeria","Destination \u2014 Morocco","Destination \u2014 Bali","Destination \u2014 Israel"] (if a destination is mentioned that isn't in this list, pick the closest match or null),
   "bud": string or null \u2014 choose only from this exact list, copied verbatim: ["under $25,000","$25,000\u2013$50,000","$50,000\u2013$100,000","$100,000\u2013$200,000","$200,000+"],
@@ -1016,8 +1045,8 @@ Fields to extract (use null for any not mentioned or unclear \u2014 do not guess
   "obs": string or null \u2014 choose only from this exact list, copied verbatim: ["cultural / secular","moderately observant","strictly observant"]
 }
 
-Worked example \u2014 input: "We're Rachel and Arjun, around 120 guests in NYC next June, budget about $75k, both families fairly observant"
-Correct output: {"p1":"Rachel","p2":"Arjun","tr":null,"sz":"Mid-size (75\u2013200 guests)","loc":"New York / New Jersey","bud":"$50,000\u2013$100,000","dt":"June 2026","obs":"moderately observant"}
+Worked example \u2014 input: "We're Priya and Arjun, Priya's family is Tamil, around 120 guests in NYC next June, budget about $75k, both families fairly observant"
+Correct output: {"p1":"Priya","p2":"Arjun","tr":["Hindu"],"hindu_region":"Tamil","sz":"Mid-size (75\u2013200 guests)","loc":"New York / New Jersey","bud":"$50,000\u2013$100,000","dt":"June 2026","obs":"moderately observant"}
 
 Only fill a field if it is reasonably clear from the text. Leave ambiguous or unmentioned fields as null.`;
 
@@ -1067,7 +1096,8 @@ function applyExtracted(parsed, originalText){
     loc: FLOWS.setup.find(q=>q.key==='loc').options,
     bud: FLOWS.setup.find(q=>q.key==='bud').options,
     obs: FLOWS.setup.find(q=>q.key==='obs').options,
-    tr: FLOWS.setup.find(q=>q.key==='tr').options
+    tr: FLOWS.setup.find(q=>q.key==='tr').options,
+    hindu_region: FLOWS.setup.find(q=>q.key==='hindu_region').options
   };
 
   function matchOption(val, optionsList){
@@ -1114,6 +1144,14 @@ function applyExtracted(parsed, originalText){
     if(q.key==='tr' && Array.isArray(val) && val.length){
       const cleaned = val.map(v=>matchOption(v, validOptions.tr)).filter(Boolean).slice(0,2);
       if(cleaned.length){ STATE.setup.answers.tr = cleaned; ok = true; }
+    } else if(q.key==='hindu_region'){
+      const isHindu = Array.isArray(STATE.setup.answers.tr) && STATE.setup.answers.tr.includes('Hindu');
+      if(!isHindu){
+        // Not applicable for this couple \u2014 don't ask it, and don't count it as missing.
+        return;
+      }
+      const matched = matchOption(val, validOptions.hindu_region);
+      if(matched){ STATE.setup.answers.hindu_region = matched; ok = true; }
     } else if(['sz','loc','bud','obs'].includes(q.key) && val){
       let matched = matchOption(val, validOptions[q.key]);
       if(!matched && q.key==='sz'){ matched = matchSizeByNumber(val); }
