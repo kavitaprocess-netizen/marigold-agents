@@ -72,6 +72,12 @@ textarea.fi{border:1px solid var(--bdr);border-radius:8px;padding:12px 14px;resi
 .out-nav{margin-bottom:16px}
 .out-back-btn{background:var(--warm);border:1px solid var(--bdr);color:var(--deep);font-size:12px;letter-spacing:.5px;padding:7px 16px;border-radius:100px;cursor:pointer;font-family:'Playfair Display',Georgia,serif;font-style:italic;transition:all .15s}
 .out-back-btn:hover{background:var(--g);border-color:var(--gk)}
+
+.saved-results{display:flex;flex-wrap:wrap;gap:7px;margin-bottom:20px}
+.saved-tab{padding:7px 15px;border-radius:100px;border:1px solid var(--bdr);font-size:12px;color:var(--tx);cursor:pointer;background:#fff;font-family:'Playfair Display',Georgia,serif;font-style:italic;transition:all .15s}
+.saved-tab:hover{border-color:var(--gd);background:var(--warm)}
+.saved-tab.active{border-color:var(--gk);background:var(--g);color:var(--deep);font-weight:500}
+
 .out-ey{font-size:10px;letter-spacing:2px;text-transform:uppercase;color:var(--muted);margin-bottom:18px;display:flex;align-items:center;gap:8px}
 .out-ey::after{content:'';flex:1;height:1px;background:var(--bdr)}
 .out-body{font-size:14px;line-height:1.85;color:var(--tx);font-family:Georgia,serif}
@@ -227,6 +233,7 @@ textarea.fi{border:1px solid var(--bdr);border-radius:8px;padding:12px 14px;resi
     <div class="qcard" id="qc-cie"></div>
     <div class="out" id="cie-out">
       <div class="out-nav"><button class="out-back-btn" onclick="goBack('cie')">← back to questions</button></div>
+      <div class="saved-results" id="cie-saved-tabs"></div>
       <div class="out-ey">Your personalised plan</div>
       <div class="out-body" id="cie-res"></div>
     </div>
@@ -299,20 +306,20 @@ const FLOWS = {
   ],
   cie: [
     {key:'focus', label:'Agent one \u00b7 your plan', text:'What would you like to focus on?', type:'choice', options:[
-      'full plan \u2014 ceremonies, checklist, budget, vendor priorities, conflict flags',
+      'full plan \u2014 ceremonies, checklist, budget, vendor priorities, decisions to align on',
       'immediate priorities \u2014 next 3 months only',
       'budget breakdown by category',
       'ceremony sequence and event order',
-      'interfaith conflict flags and decisions to make together',
+      'decisions to align on as a couple and with family',
       'which vendors to book first and why'
     ], display:{
-      'full plan \u2014 ceremonies, checklist, budget, vendor priorities, conflict flags':'Everything',
+      'full plan \u2014 ceremonies, checklist, budget, vendor priorities, decisions to align on':'Everything',
       'immediate priorities \u2014 next 3 months only':'Next 3 months',
       'budget breakdown by category':'Budget',
       'ceremony sequence and event order':'Ceremony sequence',
-      'interfaith conflict flags and decisions to make together':'Conflict flags',
+      'decisions to align on as a couple and with family':'Decisions to align on',
       'which vendors to book first and why':'Vendor priorities'
-    }, default:'full plan \u2014 ceremonies, checklist, budget, vendor priorities, conflict flags'}
+    }, default:'full plan \u2014 ceremonies, checklist, budget, vendor priorities, decisions to align on'}
   ],
   vendor: [
     {key:'source', label:'Agent two \u00b7 find vendors', text:'Are you looking for recommendations, or do you already have someone in mind?', type:'choice', options:[
@@ -367,7 +374,7 @@ const FLOWS = {
 /* runtime state per flow */
 const STATE = {
   setup: {idx:0, answers:{}},
-  cie: {idx:0, answers:{}},
+  cie: {idx:0, answers:{}, resultsByFocus:{}},
   vendor: {idx:0, answers:{}},
   inquiry: {idx:0, answers:{}},
   guest: {idx:0, answers:{}}
@@ -458,14 +465,16 @@ function renderQuestion(flow){
   }
 
   const q = qs[st.idx];
-  const existing = st.answers[q.key] !== undefined ? st.answers[q.key] : q.default;
+  const resolvedDefault = q.defaultFn ? q.defaultFn(STATE[flow].answers) : q.default;
+  const existing = st.answers[q.key] !== undefined ? st.answers[q.key] : resolvedDefault;
 
   let inner = '<div class="ql">'+q.label+'</div><div class="qt">'+q.text+'</div>';
   if(q.sub) inner += '<div class="qs">'+q.sub+'</div>';
 
   if(q.type === 'choice'){
+    const optionsList = q.optionsFn ? q.optionsFn(STATE[flow].answers) : q.options;
     inner += '<div class="pg" id="pg-'+flow+'-'+q.key+'">';
-    q.options.forEach(opt=>{
+    optionsList.forEach(opt=>{
       const isOn = q.multi ? (Array.isArray(existing) && existing.includes(opt)) : (existing===opt);
       const label = q.display ? (q.display[opt]||opt) : opt;
       inner += '<button class="p'+(isOn?' on':'')+'" data-v="'+opt.replace(/"/g,'&quot;')+'">'+label+'</button>';
@@ -512,14 +521,15 @@ function collectAnswer(flow){
   const qs = FLOWS[flow];
   const st = STATE[flow];
   const q = qs[st.idx];
+  const resolvedDefault = q.defaultFn ? q.defaultFn(STATE[flow].answers) : q.default;
   if(q.type === 'choice'){
     const wrap = document.getElementById('pg-'+flow+'-'+q.key);
     const sel = [...wrap.querySelectorAll('.p.on')].map(b=>b.dataset.v);
-    if(q.multi) return sel.length ? sel : (q.default||[]);
-    return sel[0] || q.default;
+    if(q.multi) return sel.length ? sel : (resolvedDefault||[]);
+    return sel[0] || resolvedDefault;
   } else {
     const fi = document.getElementById('fi-'+flow+'-'+q.key);
-    return fi.value.trim() || q.default || '';
+    return fi.value.trim() || resolvedDefault || '';
   }
 }
 
@@ -586,21 +596,36 @@ function finalizeSetup(){
 
 function showRunButton(flow){
   const freshLabels = {cie:'Generate my plan', vendor:'Find vendors', inquiry:'Draft my message', guest:'Draft message'};
-  const regenLabels = {cie:'Regenerate my plan', vendor:'Search again', inquiry:'Redraft my message', guest:'Redraft message'};
+  const regenLabels = {cie:'Regenerate this section', vendor:'Search again', inquiry:'Redraft my message', guest:'Redraft message'};
   let label = freshLabels[flow];
-  if(flow==='vendor' && STATE.vendor.answers.source==='bring my own'){
+  let alreadyHasThisResult = false;
+
+  if(flow==='cie'){
+    const currentFocus = STATE.cie.answers.focus;
+    alreadyHasThisResult = !!(currentFocus && STATE.cie.resultsByFocus[currentFocus]);
+    if(alreadyHasThisResult) label = regenLabels.cie;
+  } else if(flow==='vendor' && STATE.vendor.answers.source==='bring my own'){
     label = STATE.vendor.generatedAt ? 'Resend invite' : 'Send invite';
+    alreadyHasThisResult = !!STATE.vendor.generatedAt;
   } else if(STATE[flow].generatedAt){
     label = regenLabels[flow];
+    alreadyHasThisResult = true;
   }
 
   const card = document.getElementById('qc-'+flow);
   let html = '<button class="cta" id="run-'+flow+'" onclick="runFlow(\''+flow+'\')">'+label+' <span class="arr">\u2192</span></button>'+
     '<div style="margin-top:14px"><button class="back-link" onclick="goBack(\''+flow+'\')">edit answers</button></div>';
-  if(STATE[flow].generatedAt){
-    html += '<div class="regen-note">There\u2019s already a result below. Only click this if you want a fresh attempt \u2014 it\u2019s written from scratch each time, so the wording and suggestions may come out differently.</div>';
+  if(alreadyHasThisResult){
+    const note = flow==='cie'
+      ? 'You already have a saved result for this option \u2014 it\u2019s shown below the tabs. Only click this if you want a fresh attempt; it\u2019s written from scratch each time, so wording may differ. Your other saved results stay untouched.'
+      : 'There\u2019s already a result below. Only click this if you want a fresh attempt \u2014 it\u2019s written from scratch each time, so the wording and suggestions may come out differently.';
+    html += '<div class="regen-note">'+note+'</div>';
   }
   card.innerHTML = html;
+
+  if(flow==='cie' && alreadyHasThisResult){
+    showCachedPlanResult(STATE.cie.answers.focus);
+  }
 
   // The plan generates itself automatically the first time the couple reaches this
   // screen with all setup questions answered \u2014 no extra click required.
@@ -802,15 +827,16 @@ function renderMD(src, opts){
 function ctx(){
   const isIF = W.tr.length>1;
   const isDest = W.loc.toLowerCase().includes('destination');
+  const isIndia = W.loc.toLowerCase().includes('india');
   const tradLine = W.tr.map(t => (t==='Hindu' && W.hinduRegion) ? 'Hindu ('+W.hinduRegion+')' : t).join(' + ');
   return ['WEDDING CONTEXT:','Couple: '+W.p1+' and '+W.p2,'Traditions: '+tradLine+(isIF?' \u2014 INTERFAITH WEDDING':''),'Size: '+W.sz,'Budget: '+W.bud,'Date: '+W.dt,'Location: '+W.loc,'Observance: '+W.obs,
     isDest?'DESTINATION WEDDING \u2014 apply all destination checks: legal marriage recognition, visa requirements for international guests, travel advisory monitoring, Stripe market availability, currency risk.':'',
-    isIF?'INTERFAITH WEDDING \u2014 include a "Conflict flags" section: decisions the couple must make together, framed as choices not problems.':''
+    isIndia?'LOCATION IS INDIA \u2014 quote all costs in INR with an approximate USD equivalent in parentheses, using realistic Indian market rates for the couple\u2019s stated quality/size tier, not a scaled-down US price.':''
   ].filter(Boolean).join('\n');
 }
 
 /* ============ API CALL ============ */
-async function ask(sys,usr,resId,outId,btnId,lbl,renderOpts,flow,maxTokens,loadingOverride){
+async function ask(sys,usr,resId,outId,btnId,lbl,renderOpts,flow,maxTokens,loadingOverride,cacheKey){
   const btn=document.getElementById(btnId);
   const out=document.getElementById(outId);
   const res=document.getElementById(resId);
@@ -844,8 +870,13 @@ async function ask(sys,usr,resId,outId,btnId,lbl,renderOpts,flow,maxTokens,loadi
     if(d.stop_reason === 'max_tokens'){
       stampHTML += '<p class="truncated-note">\u26a0 This response was cut off because it ran long. Try "Regenerate" \u2014 it may come out shorter and complete, or ask to focus on one section at a time.</p>';
     }
-    res.innerHTML = stampHTML + renderMD(raw, renderOpts);
+    const bodyHTML = renderMD(raw, renderOpts);
+    res.innerHTML = stampHTML + bodyHTML;
     if(flow){ STATE[flow].generatedAt = Date.now(); }
+    if(flow==='cie' && cacheKey){
+      STATE.cie.resultsByFocus[cacheKey] = { bodyHTML, timeStamp, truncated: d.stop_reason === 'max_tokens' };
+      renderSavedPlanTabs(cacheKey);
+    }
   }catch(e){
     res.className='out-body';
     res.innerHTML='<p style="color:var(--muted);font-style:italic">\u26a0 '+String(e.message).replace(/&/g,'&amp;').replace(/</g,'&lt;')+'</p>';
@@ -887,9 +918,70 @@ function runByoInvite(a){
 }
 
 
+/* ============ SAVED PLAN RESULTS (one per focus option) ============ */
+const focusDisplayMap = {
+  'full plan \u2014 ceremonies, checklist, budget, vendor priorities, decisions to align on':'Everything',
+  'immediate priorities \u2014 next 3 months only':'Next 3 months',
+  'budget breakdown by category':'Budget',
+  'ceremony sequence and event order':'Ceremony sequence',
+  'decisions to align on as a couple and with family':'Decisions to align on',
+  'which vendors to book first and why':'Vendor priorities'
+};
+
+function renderSavedPlanTabs(activeKey){
+  const wrap = document.getElementById('cie-saved-tabs');
+  if(!wrap) return;
+  const keys = Object.keys(STATE.cie.resultsByFocus);
+  if(keys.length <= 1){ wrap.innerHTML = ''; return; }
+  wrap.innerHTML = keys.map(k=>{
+    const label = focusDisplayMap[k] || k;
+    const isActive = k === activeKey;
+    return '<button class="saved-tab'+(isActive?' active':'')+'" onclick="showCachedPlanResult(\''+k.replace(/'/g,"\\'")+'\')">'+label+'</button>';
+  }).join('');
+}
+
+function showCachedPlanResult(focusKey){
+  const cached = STATE.cie.resultsByFocus[focusKey];
+  if(!cached) return;
+  const out = document.getElementById('cie-out');
+  const res = document.getElementById('cie-res');
+  out.style.display = 'block';
+  res.className = 'out-body';
+  let stampHTML = '<p class="gen-stamp">Saved result \u00b7 generated '+cached.timeStamp+'</p>';
+  if(cached.truncated){
+    stampHTML += '<p class="truncated-note">\u26a0 This response was cut off because it ran long. Try "Regenerate" \u2014 it may come out shorter and complete.</p>';
+  }
+  res.innerHTML = stampHTML + cached.bodyHTML;
+  renderSavedPlanTabs(focusKey);
+  // keep the "focus" question in sync so Regenerate targets the right one
+  STATE.cie.answers.focus = focusKey;
+  updateRunButtonLabel('cie');
+  out.scrollIntoView({behavior:'smooth', block:'start'});
+}
+
+function updateRunButtonLabel(flow){
+  // Updates just the button label/note for an already-rendered run-button card,
+  // without re-triggering result display (avoids re-entering showCachedPlanResult).
+  if(flow!=='cie') return;
+  const btn = document.getElementById('run-'+flow);
+  if(!btn) return;
+  const currentFocus = STATE.cie.answers.focus;
+  const hasResult = !!(currentFocus && STATE.cie.resultsByFocus[currentFocus]);
+  btn.innerHTML = (hasResult ? 'Regenerate this section' : 'Generate my plan') + ' <span class="arr">\u2192</span>';
+  const card = document.getElementById('qc-'+flow);
+  let noteEl = card.querySelector('.regen-note');
+  if(hasResult && !noteEl){
+    card.insertAdjacentHTML('beforeend', '<div class="regen-note">You already have a saved result for this option \u2014 it\u2019s shown below the tabs. Only click this if you want a fresh attempt; it\u2019s written from scratch each time, so wording may differ. Your other saved results stay untouched.</div>');
+  } else if(!hasResult && noteEl){
+    noteEl.remove();
+  }
+}
+
 function runFlow(flow){
   const a = STATE[flow].answers;
   if(flow==='cie'){
+    const focusKey = a.focus;
+
     const sys=`You are the Marigold Cultural Intelligence Engine.
 RULES:
 1. Draw only from culturally verified information. Where uncertain say "confirm with your officiant and family."
@@ -897,23 +989,24 @@ RULES:
 3. Size-aware: Micro/intimate = shorter checklist, experience-first budget. Large/grand = delegation-first.
 4. Tariff: flag imported textiles (lehenga, aso-ebi) and florals (Indian marigolds, jasmine) as tariff-sensitive. Recommend price-lock deposits.
 5. Destination: flag marriage recognition at home country, visa requirements, travel advisories.
-6. Interfaith: include a "Conflict flags" section \u2014 decisions framed as choices not problems.
-7. Close with: "Confirm all ceremony details with your officiant and families before booking."
+6. Decisions to align on: include this section for ANY couple, not just interfaith ones. For interfaith couples, focus on which tradition's elements appear where. For single-tradition couples, focus on real points of alignment that actually apply \u2014 e.g. regional differences between the two families' versions of the tradition, generational expectations (modern couple vs. more traditional parents), or guest-list/budget trade-offs. Frame everything as choices to make together, not problems. If genuinely nothing applies for this couple, omit the section entirely rather than inventing generic content.
+7. Currency and cost calibration: if the wedding location is a "Destination" outside the US, all costs, budget tables, and vendor price ranges must reflect REALISTIC LOCAL costs for that country, not US pricing scaled down. For Destination \u2014 India specifically: quote in INR (with an approximate USD equivalent in parentheses), and use realistic Indian wedding market rates \u2014 a wedding that would cost $75,000 in the US could be a significantly different budget in India for comparable quality, depending on city tier and vendor caliber. Do not assume US dollar bucket ranges translate directly.
+8. Close with: "Confirm all ceremony details with your officiant and families before booking."
 
-STRUCTURE \u2014 follow this exactly, with these hard caps. Do not exceed any cap, even if it means leaving out detail you'd otherwise include:
-## Overview (max 3 sentences total, no bullets needed here)
-## Budget framework (a markdown table, max 8 rows of line items \u2014 the most important categories only, not an exhaustive list. One sentence max before the table.)
-## Ceremony sequence (bulleted list, max 6 bullets, one line each)
-## Vendor priorities (bulleted list, max 6 bullets, one line each \u2014 which vendors to book first and why, in priority order)
-## Conflict flags (only if interfaith \u2014 bulleted list, max 4 bullets, one line each)
-## Checklist (bulleted list, max 8 items, one line each, concrete and actionable)
+STRUCTURE \u2014 follow this exactly. These are upper limits to prevent rambling, not targets to hit regardless of relevance \u2014 use as much of the cap as the couple's actual complexity warrants (e.g. an interfaith destination wedding genuinely needs more budget rows and vendor priorities than a small single-tradition local one), but never pad with filler just to fill space:
+## Overview (max 4 sentences total, no bullets needed here)
+## Budget framework (a markdown table, max 12 rows of line items \u2014 cover every category that's actually relevant to this couple's traditions and size, not just the most common ones. One sentence max before the table. Currency calibrated per rule 7 above.)
+## Ceremony sequence (bulleted list, max 10 bullets, one line each \u2014 include every distinct ceremony or event the couple's traditions call for, don't compress multiple events into one bullet)
+## Vendor priorities (bulleted list, max 10 bullets, one line each \u2014 which vendors to book first and why, in priority order \u2014 include every vendor category genuinely needed for this couple's traditions and size)
+## Decisions to align on (only if something genuinely applies, per rule 6 \u2014 bulleted list, max 6 bullets, one line each)
+## Checklist (bulleted list, max 12 items, one line each, concrete and actionable \u2014 cover the full scope of what needs doing, not just a sample)
 
 Every table row (header, separator, every data row) is exactly one line, no blank lines between rows, short cell contents. Use **bold** only for key numbers or terms, never whole sentences. If FOCUS below asks for only one of these sections, output only that section in full \u2014 do not include the others at all.
 
-This is a skimmable reference, not a document to read end to end. When in doubt, cut rather than add.
+Each bullet or row should be a genuinely distinct point, not a restatement. Prioritize completeness over brevity within each cap \u2014 it's better to use 9 of 10 ceremony bullets covering real events than to compress them down to 4 for the sake of looking shorter.
 
 Tone: warm but brief. Specific and useful over eloquent.`;
-    ask(sys, ctx()+'\n\nFOCUS: '+a.focus+'\n\nGenerate the wedding plan.', 'cie-res','cie-out','run-cie','Generate my plan', {checklistMode:true, idPrefix:'cie'}, 'cie', 4000);
+    ask(sys, ctx()+'\n\nFOCUS: '+a.focus+'\n\nGenerate the wedding plan.', 'cie-res','cie-out','run-cie','Generate my plan', {checklistMode:true, idPrefix:'cie'}, 'cie', 6000, null, focusKey);
   } else if(flow==='vendor'){
     if(a.source === 'bring my own'){
       runByoInvite(a);
@@ -933,16 +1026,17 @@ RULES:
    Always label as "examples to verify current availability."
 4. Dietary: never suggest non-kosher for kosher vendors, non-halal for halal vendors.
 5. Flag tariff risks for imported florals, specialty ingredients, textiles.
+6. Currency calibration: if the wedding location is a destination outside the US, all pricing in "Budget reality check" must reflect REALISTIC LOCAL market costs, not US pricing scaled down. For Destination \u2014 India specifically: quote in INR with an approximate USD equivalent in parentheses, using realistic Indian vendor rates for this category and the couple's stated tier \u2014 do not assume US dollar bucket ranges translate directly.
 
-STRUCTURE \u2014 follow exactly, with these hard caps. Do not exceed any cap:
-## What to look for (bulleted list, max 4 bullets, one line each \u2014 not a paragraph)
-## Vendors to consider (bulleted list, max 4 vendors. Each bullet: **Name** \u2014 one line reason, nothing more. No sub-bullets, no extra detail per vendor.)
-## Where to find more (max 2 sentences)
-## Questions to ask (bulleted list, max 4 bullets, one line each)
-## Budget reality check (max 2 sentences, mention one concrete number)
+STRUCTURE \u2014 follow exactly. These are upper limits to prevent rambling, not targets \u2014 use what the request actually warrants:
+## What to look for (bulleted list, max 6 bullets, one line each \u2014 not a paragraph)
+## Vendors to consider (bulleted list, max 6 vendors. Each bullet: **Name** \u2014 one line reason, nothing more. No sub-bullets, no extra detail per vendor.)
+## Where to find more (max 3 sentences)
+## Questions to ask (bulleted list, max 6 bullets, one line each)
+## Budget reality check (max 3 sentences, mention concrete numbers, currency calibrated per rule 6 above)
 
-No paragraph anywhere should exceed 2 sentences. This is a skimmable reference, not an essay \u2014 when in doubt, cut rather than add.`;
-    ask(sys, ctx()+'\n\nVENDOR: '+a.cat+'\nBUDGET: '+a.bud+'\nEVENT DATE: '+a.date, 'vm-res','vm-out','run-vendor','Find vendors', null, 'vendor', 1200);
+No paragraph anywhere should exceed 3 sentences. This is a skimmable reference, not an essay \u2014 prioritize covering real, useful options over staying short.`;
+    ask(sys, ctx()+'\n\nVENDOR: '+a.cat+'\nBUDGET: '+a.bud+'\nEVENT DATE: '+a.date, 'vm-res','vm-out','run-vendor','Find vendors', null, 'vendor', 1800);
   } else if(flow==='inquiry'){
     const diet = a.diet;
     const sys=`You are the Marigold Inquiry Drafter.\nABSOLUTE RULES:\n1. DIETARY SAFETY \u2014 vendor certification: "${diet}". Kosher: NEVER mention pork, shellfish, or mixing meat/dairy. Halal: NEVER mention pork or alcohol. Zero exceptions.\n2. Maximum 160 words.\n3. Always include a price-lock question.\n4. One specific genuine detail about the vendor. Not flattery \u2014 specificity.\n5. Include event name, date, guest count, need, budget.\n6. Never open with "I hope this email finds you well."\n7. End with: [Review before sending \u2014 personalise the opening and confirm all details]\nAfter draft add:\nCultural details included: (one line)\nTariff note: (if relevant, otherwise omit)`;
