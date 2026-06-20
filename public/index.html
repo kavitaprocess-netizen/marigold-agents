@@ -637,13 +637,13 @@ function renderMD(src, opts){
   while(i < lines.length){
     let line = lines[i];
 
-    if(/^\s*\|.+\|\s*$/.test(line) && lines[i+1] && /^\s*\|?[\s:|-]+\|\s*$/.test(lines[i+1])){
+    if(/^\s*\|?.+\|.+\|?\s*$/.test(line) && lines[i+1] && /^\s*\|?[\s:|-]+\|[\s:|-]*\|?\s*$/.test(lines[i+1])){
       closeList();
-      const headCells = line.trim().replace(/^\||\|$/g,'').split('|').map(c=>c.trim());
+      const headCells = line.trim().replace(/^\|/,'').replace(/\|$/,'').split('|').map(c=>c.trim());
       let body = [];
       i += 2;
-      while(i < lines.length && /^\s*\|.+\|\s*$/.test(lines[i])){
-        body.push(lines[i].trim().replace(/^\||\|$/g,'').split('|').map(c=>c.trim()));
+      while(i < lines.length && /\|/.test(lines[i]) && lines[i].trim() !== ''){
+        body.push(lines[i].trim().replace(/^\|/,'').replace(/\|$/,'').split('|').map(c=>c.trim()));
         i++;
       }
       html += '<div class="out-table-wrap"><table><thead><tr>' +
@@ -776,7 +776,7 @@ function runByoInvite(a){
 function runFlow(flow){
   const a = STATE[flow].answers;
   if(flow==='cie'){
-    const sys=`You are the Marigold Cultural Intelligence Engine.\nRULES:\n1. Draw only from culturally verified information. Where uncertain say "confirm with your officiant and family."\n2. Never suggest one tradition takes priority over another.\n3. Size-aware: Micro/intimate = shorter checklist, experience-first budget. Large/grand = delegation-first.\n4. Tariff: flag imported textiles (lehenga, aso-ebi) and florals (Indian marigolds, jasmine) as tariff-sensitive. Recommend price-lock deposits.\n5. Destination: flag marriage recognition at home country, visa requirements, travel advisories.\n6. Interfaith: include a "Conflict flags" section \u2014 decisions framed as choices not problems.\n7. Close with: "Confirm all ceremony details with your officiant and families before booking."\nFORMATTING: Use clean markdown. ## for section headings (sentence case). Use a real markdown table with | pipes for any budget breakdown. Use **bold** sparingly for key numbers or terms only. Short paragraphs.\nALWAYS include one section with the exact heading "## Checklist" containing a flat bullet list (- item) of concrete, actionable to-do items the couple can check off \u2014 no nested sub-bullets, no sub-headings inside that section.\nWrite in a warm editorial voice. Specific and useful.`;
+    const sys=`You are the Marigold Cultural Intelligence Engine.\nRULES:\n1. Draw only from culturally verified information. Where uncertain say "confirm with your officiant and family."\n2. Never suggest one tradition takes priority over another.\n3. Size-aware: Micro/intimate = shorter checklist, experience-first budget. Large/grand = delegation-first.\n4. Tariff: flag imported textiles (lehenga, aso-ebi) and florals (Indian marigolds, jasmine) as tariff-sensitive. Recommend price-lock deposits.\n5. Destination: flag marriage recognition at home country, visa requirements, travel advisories.\n6. Interfaith: include a "Conflict flags" section \u2014 decisions framed as choices not problems.\n7. Close with: "Confirm all ceremony details with your officiant and families before booking."\nFORMATTING: Use clean markdown. ## for section headings (sentence case). Use a real markdown table with | pipes for any budget breakdown \u2014 every table row, including the header and separator, MUST be written as exactly one single line with no line breaks inside it; keep cell contents short (a few words) so this is easy, and never wrap a row across two lines. Use **bold** sparingly for key numbers or terms only. Short paragraphs.\nALWAYS include one section with the exact heading "## Checklist" containing a flat bullet list (- item) of concrete, actionable to-do items the couple can check off \u2014 no nested sub-bullets, no sub-headings inside that section.\nWrite in a warm editorial voice. Specific and useful.`;
     ask(sys, ctx()+'\n\nFOCUS: '+a.focus+'\n\nGenerate the wedding plan.', 'cie-res','cie-out','run-cie','Generate my plan', {checklistMode:true, idPrefix:'cie'});
   } else if(flow==='vendor'){
     if(a.source === 'bring my own'){
