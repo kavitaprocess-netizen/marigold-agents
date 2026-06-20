@@ -69,6 +69,9 @@ textarea.fi{border:1px solid var(--bdr);border-radius:8px;padding:12px 14px;resi
 .back-link{background:none;border:none;color:var(--muted);font-size:11px;letter-spacing:1px;cursor:pointer;font-family:'Playfair Display',Georgia,serif;text-decoration:underline}
 
 .out{margin-top:36px;padding-top:32px;border-top:1px solid var(--bdr);display:none}
+.out-nav{margin-bottom:16px}
+.out-back-btn{background:var(--warm);border:1px solid var(--bdr);color:var(--deep);font-size:12px;letter-spacing:.5px;padding:7px 16px;border-radius:100px;cursor:pointer;font-family:'Playfair Display',Georgia,serif;font-style:italic;transition:all .15s}
+.out-back-btn:hover{background:var(--g);border-color:var(--gk)}
 .out-ey{font-size:10px;letter-spacing:2px;text-transform:uppercase;color:var(--muted);margin-bottom:18px;display:flex;align-items:center;gap:8px}
 .out-ey::after{content:'';flex:1;height:1px;background:var(--bdr)}
 .out-body{font-size:14px;line-height:1.85;color:var(--tx);font-family:Georgia,serif}
@@ -82,6 +85,7 @@ textarea.fi{border:1px solid var(--bdr);border-radius:8px;padding:12px 14px;resi
 
 .gen-stamp{font-family:'Playfair Display',Georgia,serif;font-style:italic;font-size:11px;color:var(--gk);background:var(--g);display:inline-block;padding:4px 12px;border-radius:100px;margin-bottom:18px}
 .regen-note{font-size:11px;color:var(--gk);font-style:italic;background:var(--warm);border-left:2px solid var(--gd);padding:8px 12px;margin-top:12px;line-height:1.6;max-width:420px}
+.truncated-note{font-size:12px;color:#8a4a1a;font-style:italic;background:#FFF3E8;border-left:2px solid #D98850;padding:9px 13px;margin-bottom:18px;line-height:1.6;border-radius:0 6px 6px 0}
 
 .out-body h1,.out-body h2,.out-body h3{font-family:'Playfair Display',Georgia,serif;color:var(--deep);font-weight:500;font-style:italic;line-height:1.3}
 .out-body h1{font-size:22px;margin:28px 0 14px}
@@ -221,14 +225,22 @@ textarea.fi{border:1px solid var(--bdr);border-radius:8px;padding:12px 14px;resi
     <div class="ctx" id="ctx-cie"></div>
     <div class="transcript" id="tr-cie"></div>
     <div class="qcard" id="qc-cie"></div>
-    <div class="out" id="cie-out"><div class="out-ey">Your personalised plan</div><div class="out-body" id="cie-res"></div></div>
+    <div class="out" id="cie-out">
+      <div class="out-nav"><button class="out-back-btn" onclick="goBack('cie')">\u2190 back to questions</button></div>
+      <div class="out-ey">Your personalised plan</div>
+      <div class="out-body" id="cie-res"></div>
+    </div>
   </div>
 
   <div class="screen" id="s-vendor">
     <div class="ctx" id="ctx-vendor"></div>
     <div class="transcript" id="tr-vendor"></div>
     <div class="qcard" id="qc-vendor"></div>
-    <div class="out" id="vm-out"><div class="out-ey" id="vm-ey">Vendor recommendations</div><div class="out-body" id="vm-res"></div></div>
+    <div class="out" id="vm-out">
+      <div class="out-nav"><button class="out-back-btn" onclick="goBack('vendor')">\u2190 back to questions</button></div>
+      <div class="out-ey" id="vm-ey">Vendor recommendations</div>
+      <div class="out-body" id="vm-res"></div>
+    </div>
     <div class="restart" id="vm-card-restart" style="display:none"></div>
   </div>
 
@@ -236,20 +248,28 @@ textarea.fi{border:1px solid var(--bdr);border-radius:8px;padding:12px 14px;resi
     <div class="ctx" id="ctx-inquiry"></div>
     <div class="transcript" id="tr-inquiry"></div>
     <div class="qcard" id="qc-inquiry"></div>
-    <div class="out" id="inq-out"><div class="out-ey">Your draft — review before sending</div><div class="out-body" id="inq-res"></div></div>
+    <div class="out" id="inq-out">
+      <div class="out-nav"><button class="out-back-btn" onclick="goBack('inquiry')">\u2190 back to questions</button></div>
+      <div class="out-ey">Your draft \u2014 review before sending</div>
+      <div class="out-body" id="inq-res"></div>
+    </div>
   </div>
 
   <div class="screen" id="s-guest">
     <div class="ctx" id="ctx-guest"></div>
     <div class="transcript" id="tr-guest"></div>
     <div class="qcard" id="qc-guest"></div>
-    <div class="out" id="gc-out"><div class="out-ey">Your draft — review before sending</div><div class="out-body" id="gc-res"></div></div>
+    <div class="out" id="gc-out">
+      <div class="out-nav"><button class="out-back-btn" onclick="goBack('guest')">\u2190 back to questions</button></div>
+      <div class="out-ey">Your draft \u2014 review before sending</div>
+      <div class="out-body" id="gc-res"></div>
+    </div>
   </div>
 </div>
 
 <script>
 /* ============ DATA MODEL ============ */
-const W={p1:'',p2:'',tr:[],sz:'',loc:'',bud:'',dt:'',obs:'',ready:false};
+const W={p1:'',p2:'',tr:[],sz:'',loc:'',bud:'',dt:'',obs:'',ready:false,shouldAutoGeneratePlan:false};
 
 /* Per-flow question definitions. Each question: {key, label(eyebrow), text, type, options?, placeholder?, default?, multi?, max?}
    type: 'choice' | 'text' | 'textarea' */
@@ -405,6 +425,7 @@ function renderQuestion(flow){
   const qs = FLOWS[flow];
   const st = STATE[flow];
   const card = document.getElementById('qc-'+flow);
+  const outPanelIds = {cie:'cie-out', vendor:'vm-out', inquiry:'inq-out', guest:'gc-out'};
 
   // auto-skip questions already answered via free-text extraction, or not applicable given prior answers
   while(st.idx < qs.length && (
@@ -423,6 +444,13 @@ function renderQuestion(flow){
       showRunButton(flow);
     }
     return;
+  }
+
+  // A real question is about to be shown \u2014 any previous result for this flow
+  // must not still be visible alongside it, no matter how we got here.
+  if(outPanelIds[flow]){
+    const outEl = document.getElementById(outPanelIds[flow]);
+    if(outEl) outEl.style.display = 'none';
   }
 
   const q = qs[st.idx];
@@ -505,6 +533,7 @@ function advance(flow){
 function goBack(flow){
   const st = STATE[flow];
   const qs = FLOWS[flow];
+  const outPanelIds = {cie:'cie-out', vendor:'vm-out', inquiry:'inq-out', guest:'gc-out'};
   if(st.idx>0){
     st.idx--;
     while(st.idx>0 && (
@@ -513,10 +542,19 @@ function goBack(flow){
     )){
       st.idx--;
     }
+    if(outPanelIds[flow]){
+      const outEl = document.getElementById(outPanelIds[flow]);
+      if(outEl) outEl.style.display = 'none';
+    }
     renderTranscript(flow);
     renderQuestion(flow);
+    window.scrollTo({top:0, behavior:'smooth'});
   } else {
     // already at the first question \u2014 go to the previous screen in the journey
+    if(outPanelIds[flow]){
+      const outEl = document.getElementById(outPanelIds[flow]);
+      if(outEl) outEl.style.display = 'none';
+    }
     if(flow==='setup'){
       goTab('intro', 0, document.querySelectorAll('.tab')[0]);
     } else {
@@ -535,6 +573,7 @@ function finalizeSetup(){
   W.dt = STATE.setup.answers.dt || '';
   W.obs = STATE.setup.answers.obs || '';
   W.ready = true;
+  W.shouldAutoGeneratePlan = true;
   ['tab-cie','tab-vendor','tab-inquiry','tab-guest'].forEach(id=>document.getElementById(id).disabled=false);
   syncCtx();
   document.getElementById('qc-setup').innerHTML = '<div class="qt" style="margin-bottom:18px">All set, '+W.p1+' & '+W.p2+'.</div><button class="cta" onclick="goTab(\'cie\',1,document.querySelectorAll(\'.tab\')[1])">See your plan <span class="arr">\u2192</span></button>';
@@ -557,6 +596,13 @@ function showRunButton(flow){
     html += '<div class="regen-note">You already generated a result below \u2014 clicking this will replace it with a new version, which may come out a little different each time.</div>';
   }
   card.innerHTML = html;
+
+  // The plan generates itself automatically the first time the couple reaches this
+  // screen with all setup questions answered \u2014 no extra click required.
+  if(flow==='cie' && W.shouldAutoGeneratePlan && !STATE.cie.generatedAt){
+    W.shouldAutoGeneratePlan = false;
+    runFlow('cie');
+  }
 }
 
 /* ============ TAB SWITCHING ============ */
@@ -758,7 +804,7 @@ function ctx(){
 }
 
 /* ============ API CALL ============ */
-async function ask(sys,usr,resId,outId,btnId,lbl,renderOpts,flow){
+async function ask(sys,usr,resId,outId,btnId,lbl,renderOpts,flow,maxTokens){
   const btn=document.getElementById(btnId);
   const out=document.getElementById(outId);
   const res=document.getElementById(resId);
@@ -770,7 +816,7 @@ async function ask(sys,usr,resId,outId,btnId,lbl,renderOpts,flow){
     const r=await fetch('/api/chat',{
       method:'POST',
       headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({model:'claude-sonnet-4-6',max_tokens:1000,system:sys,messages:[{role:'user',content:usr}]})
+      body:JSON.stringify({model:'claude-sonnet-4-6',max_tokens:(maxTokens||1000),system:sys,messages:[{role:'user',content:usr}]})
     });
     if(!r.ok){
       const txt=await r.text();
@@ -782,6 +828,9 @@ async function ask(sys,usr,resId,outId,btnId,lbl,renderOpts,flow){
     const raw=(d.content||[]).map(b=>b.text||'').join('');
     const timeStamp = new Date().toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'});
     let stampHTML = '<p class="gen-stamp">Generated just now \u00b7 '+timeStamp+'</p>';
+    if(d.stop_reason === 'max_tokens'){
+      stampHTML += '<p class="truncated-note">\u26a0 This response was cut off because it ran long. Try "Regenerate" \u2014 it may come out shorter and complete, or ask to focus on one section at a time.</p>';
+    }
     res.innerHTML = stampHTML + renderMD(raw, renderOpts);
     if(flow){ STATE[flow].generatedAt = Date.now(); }
   }catch(e){
@@ -807,7 +856,7 @@ function runByoInvite(a){
     (a.byo_notes ? '\nNOTES FROM COUPLE: '+a.byo_notes : '')+
     '\n\nDraft a warm invite asking them to join Marigold for our wedding.';
 
-  ask(sys, usr, 'vm-res', 'vm-out', 'run-vendor', 'Send invite', null, 'vendor');
+  ask(sys, usr, 'vm-res', 'vm-out', 'run-vendor', 'Send invite', null, 'vendor', 600);
 
   // record-style confirmation card, mirroring the vendor/planner tracker fields
   const restartEl = document.getElementById('vm-card-restart');
@@ -829,7 +878,7 @@ function runFlow(flow){
   const a = STATE[flow].answers;
   if(flow==='cie'){
     const sys=`You are the Marigold Cultural Intelligence Engine.\nRULES:\n1. Draw only from culturally verified information. Where uncertain say "confirm with your officiant and family."\n2. Never suggest one tradition takes priority over another.\n3. Size-aware: Micro/intimate = shorter checklist, experience-first budget. Large/grand = delegation-first.\n4. Tariff: flag imported textiles (lehenga, aso-ebi) and florals (Indian marigolds, jasmine) as tariff-sensitive. Recommend price-lock deposits.\n5. Destination: flag marriage recognition at home country, visa requirements, travel advisories.\n6. Interfaith: include a "Conflict flags" section \u2014 decisions framed as choices not problems.\n7. Close with: "Confirm all ceremony details with your officiant and families before booking."\nFORMATTING: Use clean markdown. ## for section headings (sentence case). Use a real markdown table with | pipes for any budget breakdown \u2014 every table row, including the header and separator, MUST be written as exactly one single line with no line breaks inside it; keep cell contents short (a few words) so this is easy, never wrap a row across two lines, and never insert a blank line between table rows \u2014 the entire table (header, separator, and every data row) must be a single unbroken block of consecutive lines with zero blank lines anywhere inside it. Use **bold** sparingly for key numbers or terms only. Short paragraphs.\nALWAYS include one section with the exact heading "## Checklist" containing a flat bullet list (- item) of concrete, actionable to-do items the couple can check off \u2014 no nested sub-bullets, no sub-headings inside that section.\nWrite in a warm editorial voice. Specific and useful.`;
-    ask(sys, ctx()+'\n\nFOCUS: '+a.focus+'\n\nGenerate the wedding plan.', 'cie-res','cie-out','run-cie','Generate my plan', {checklistMode:true, idPrefix:'cie'}, 'cie');
+    ask(sys, ctx()+'\n\nFOCUS: '+a.focus+'\n\nGenerate the wedding plan.', 'cie-res','cie-out','run-cie','Generate my plan', {checklistMode:true, idPrefix:'cie'}, 'cie', 3000);
   } else if(flow==='vendor'){
     if(a.source === 'bring my own'){
       runByoInvite(a);
@@ -839,14 +888,14 @@ function runFlow(flow){
     document.getElementById('vm-card-restart').style.display = 'none';
     document.getElementById('vm-card-restart').innerHTML = '';
     const sys=`You are the Marigold Vendor Match Agent.\nRULES:\n1. Cultural fit is the primary criterion.\n2. Size-aware: only recommend vendors experienced at ${W.sz} scale.\n3. Reference real vendors from research where helpful:\n   NY/NJ: Mehndisha\u2014Nisha Sharma (mehndi), Tum Hi Ho Events\u2014Hiren (interfaith South Asian planner), Laksa Events (South Asian NJ), Events by Kae (Nigerian NY), Nimma Ovwori Weddings (Nigerian/Ghanaian NJ), Dave Robbins Photography, Beautini (hair & makeup), Designs by Ahn (florist), Cantor Laura Stein (interfaith officiant), Rabbi Ron Broden (interfaith officiant).\n   Chicago: VEK Photo\u2014Vinnie, Shan Photography, Rahul Rana Photography, Madison Elyse Events.\n   LA: Denise Lillie Engagements, Events by Mala, Rani Raja Weddings, Nahid Global Events.\n   Always label as "examples to verify current availability."\n4. Dietary: never suggest non-kosher for kosher vendors, non-halal for halal vendors.\n5. Flag tariff risks for imported florals, specialty ingredients, textiles.\nFormat: markdown with a ## heading per section (what to look for, example vendors, where to find more, key questions to ask, budget reality check). Bold vendor names only.`;
-    ask(sys, ctx()+'\n\nVENDOR: '+a.cat+'\nBUDGET: '+a.bud+'\nEVENT DATE: '+a.date, 'vm-res','vm-out','run-vendor','Find vendors', null, 'vendor');
+    ask(sys, ctx()+'\n\nVENDOR: '+a.cat+'\nBUDGET: '+a.bud+'\nEVENT DATE: '+a.date, 'vm-res','vm-out','run-vendor','Find vendors', null, 'vendor', 1200);
   } else if(flow==='inquiry'){
     const diet = a.diet;
     const sys=`You are the Marigold Inquiry Drafter.\nABSOLUTE RULES:\n1. DIETARY SAFETY \u2014 vendor certification: "${diet}". Kosher: NEVER mention pork, shellfish, or mixing meat/dairy. Halal: NEVER mention pork or alcohol. Zero exceptions.\n2. Maximum 160 words.\n3. Always include a price-lock question.\n4. One specific genuine detail about the vendor. Not flattery \u2014 specificity.\n5. Include event name, date, guest count, need, budget.\n6. Never open with "I hope this email finds you well."\n7. End with: [Review before sending \u2014 personalise the opening and confirm all details]\nAfter draft add:\nCultural details included: (one line)\nTariff note: (if relevant, otherwise omit)`;
-    ask(sys, ctx()+'\n\nVENDOR: '+a.name+'\nCATEGORY: '+a.cat+'\nDIETARY: '+diet+'\nEVENT: '+a.event+'\nDATE: '+a.date+'\nGUESTS: '+a.guests+'\nBUDGET: '+a.budget+'\n\nDraft the message.', 'inq-res','inq-out','run-inquiry','Draft my message', null, 'inquiry');
+    ask(sys, ctx()+'\n\nVENDOR: '+a.name+'\nCATEGORY: '+a.cat+'\nDIETARY: '+diet+'\nEVENT: '+a.event+'\nDATE: '+a.date+'\nGUESTS: '+a.guests+'\nBUDGET: '+a.budget+'\n\nDraft the message.', 'inq-res','inq-out','run-inquiry','Draft my message', null, 'inquiry', 500);
   } else if(flow==='guest'){
     const sys=`You are the Marigold Guest Communication Agent.\nRULES:\n1. Never take sides between traditions. Represent both equally.\n2. Tone must be exactly: ${a.tone}. Match throughout.\n3. Cultural explanations: welcoming and educational, never make guests feel like outsiders.\n4. Never reference geopolitical tensions or religious conflicts.\n5. Write in the couple's voice \u2014 from ${W.p1} and ${W.p2}, not from a platform.\n6. End with: [Review before sending \u2014 add personal details and confirm all information]\nAfter draft: Cultural context included: (one line)`;
-    ask(sys, ctx()+'\n\nTYPE: '+a.type+'\nAUDIENCE: '+a.aud+'\nTONE: '+a.tone+'\nNOTES: '+(a.notes||'none')+'\n\nDraft the message.', 'gc-res','gc-out','run-guest','Draft message', null, 'guest');
+    ask(sys, ctx()+'\n\nTYPE: '+a.type+'\nAUDIENCE: '+a.aud+'\nTONE: '+a.tone+'\nNOTES: '+(a.notes||'none')+'\n\nDraft the message.', 'gc-res','gc-out','run-guest','Draft message', null, 'guest', 600);
   }
 }
 
@@ -944,7 +993,10 @@ Only fill a field if it is reasonably clear from the text. Leave ambiguous or un
       headers:{'Content-Type':'application/json'},
       body: JSON.stringify({model:'claude-sonnet-4-6', max_tokens:500, system:sys, messages:[{role:'user', content:text}]})
     });
-    if(!r.ok) throw new Error('Server responded with '+r.status);
+    if(!r.ok){
+      const errTxt = await r.text();
+      throw new Error('Server responded with '+r.status+': '+errTxt.slice(0,200));
+    }
     const d = await r.json();
     if(d.error) throw new Error(d.error.message);
     const raw = (d.content||[]).map(b=>b.text||'').join('').trim();
@@ -952,13 +1004,14 @@ Only fill a field if it is reasonably clear from the text. Leave ambiguous or un
     applyExtracted(parsed, text);
   } catch(e){
     console.error('Marigold: free-text extraction failed \u2014 falling back to guided questions.', e);
-    // graceful fallback: just go to guided flow if extraction fails
     goTabRaw('setup');
     STATE.setup.idx = 0;
     STATE.setup.prefilled = {};
-    document.getElementById('qc-setup').innerHTML =
-      '<div class="extracted-note">We couldn\u2019t quite parse that automatically, so let\u2019s go through it together instead.</div>';
-    setTimeout(()=>{ renderTranscript('setup'); renderQuestion('setup'); }, 900);
+    renderTranscript('setup');
+    renderQuestion('setup');
+    document.getElementById('qc-setup').insertAdjacentHTML('afterbegin',
+      '<div class="extracted-note" style="border-left:2px solid var(--gd)">We couldn\u2019t automatically read your description this time, so let\u2019s go through it together instead. <span style="opacity:.7">('+String(e.message).replace(/&/g,'&amp;').replace(/</g,'&lt;').slice(0,140)+')</span></div>'
+    );
   }
 }
 
