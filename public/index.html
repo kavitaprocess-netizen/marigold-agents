@@ -226,7 +226,7 @@ textarea.fi{border:1px solid var(--bdr);border-radius:8px;padding:12px 14px;resi
     <div class="transcript" id="tr-cie"></div>
     <div class="qcard" id="qc-cie"></div>
     <div class="out" id="cie-out">
-      <div class="out-nav"><button class="out-back-btn" onclick="goBack('cie')">\u2190 back to questions</button></div>
+      <div class="out-nav"><button class="out-back-btn" onclick="goBack('cie')">← back to questions</button></div>
       <div class="out-ey">Your personalised plan</div>
       <div class="out-body" id="cie-res"></div>
     </div>
@@ -237,7 +237,7 @@ textarea.fi{border:1px solid var(--bdr);border-radius:8px;padding:12px 14px;resi
     <div class="transcript" id="tr-vendor"></div>
     <div class="qcard" id="qc-vendor"></div>
     <div class="out" id="vm-out">
-      <div class="out-nav"><button class="out-back-btn" onclick="goBack('vendor')">\u2190 back to questions</button></div>
+      <div class="out-nav"><button class="out-back-btn" onclick="goBack('vendor')">← back to questions</button></div>
       <div class="out-ey" id="vm-ey">Vendor recommendations</div>
       <div class="out-body" id="vm-res"></div>
     </div>
@@ -249,7 +249,7 @@ textarea.fi{border:1px solid var(--bdr);border-radius:8px;padding:12px 14px;resi
     <div class="transcript" id="tr-inquiry"></div>
     <div class="qcard" id="qc-inquiry"></div>
     <div class="out" id="inq-out">
-      <div class="out-nav"><button class="out-back-btn" onclick="goBack('inquiry')">\u2190 back to questions</button></div>
+      <div class="out-nav"><button class="out-back-btn" onclick="goBack('inquiry')">← back to questions</button></div>
       <div class="out-ey">Your draft \u2014 review before sending</div>
       <div class="out-body" id="inq-res"></div>
     </div>
@@ -260,7 +260,7 @@ textarea.fi{border:1px solid var(--bdr);border-radius:8px;padding:12px 14px;resi
     <div class="transcript" id="tr-guest"></div>
     <div class="qcard" id="qc-guest"></div>
     <div class="out" id="gc-out">
-      <div class="out-nav"><button class="out-back-btn" onclick="goBack('guest')">\u2190 back to questions</button></div>
+      <div class="out-nav"><button class="out-back-btn" onclick="goBack('guest')">← back to questions</button></div>
       <div class="out-ey">Your draft \u2014 review before sending</div>
       <div class="out-body" id="gc-res"></div>
     </div>
@@ -593,7 +593,7 @@ function showRunButton(flow){
   let html = '<button class="cta" id="run-'+flow+'" onclick="runFlow(\''+flow+'\')">'+label+' <span class="arr">\u2192</span></button>'+
     '<div style="margin-top:14px"><button class="back-link" onclick="goBack(\''+flow+'\')">edit answers</button></div>';
   if(STATE[flow].generatedAt){
-    html += '<div class="regen-note">You already generated a result below \u2014 clicking this will replace it with a new version, which may come out a little different each time.</div>';
+    html += '<div class="regen-note">There\u2019s already a result below. Only click this if you want a fresh attempt \u2014 it\u2019s written from scratch each time, so the wording and suggestions may come out differently.</div>';
   }
   card.innerHTML = html;
 
@@ -804,14 +804,21 @@ function ctx(){
 }
 
 /* ============ API CALL ============ */
-async function ask(sys,usr,resId,outId,btnId,lbl,renderOpts,flow,maxTokens){
+async function ask(sys,usr,resId,outId,btnId,lbl,renderOpts,flow,maxTokens,loadingOverride){
   const btn=document.getElementById(btnId);
   const out=document.getElementById(outId);
   const res=document.getElementById(resId);
-  if(btn){btn.disabled=true; btn.innerHTML='Thinking\u2026 <span class="arr">\u00b7</span>';}
+  const loadingLabels = {
+    cie: 'Writing your plan\u2026',
+    vendor: 'Searching for vendors\u2026',
+    inquiry: 'Drafting your message\u2026',
+    guest: 'Drafting your message\u2026'
+  };
+  const loadingText = loadingOverride || loadingLabels[flow] || 'Working\u2026';
+  if(btn){btn.disabled=true; btn.innerHTML=marigoldSpinnerSVG(16)+' '+loadingText;}
   out.style.display='block';
   res.className='out-body spin';
-  res.innerHTML='<div class="loading-bloom">'+marigoldSpinnerSVG(34)+'<span>Writing\u2026</span></div>';
+  res.innerHTML='<div class="loading-bloom">'+marigoldSpinnerSVG(34)+'<span>'+loadingText+'</span></div>';
   try{
     const r=await fetch('/api/chat',{
       method:'POST',
@@ -856,7 +863,7 @@ function runByoInvite(a){
     (a.byo_notes ? '\nNOTES FROM COUPLE: '+a.byo_notes : '')+
     '\n\nDraft a warm invite asking them to join Marigold for our wedding.';
 
-  ask(sys, usr, 'vm-res', 'vm-out', 'run-vendor', 'Send invite', null, 'vendor', 600);
+  ask(sys, usr, 'vm-res', 'vm-out', 'run-vendor', 'Send invite', null, 'vendor', 600, 'Writing your invite\u2026');
 
   // record-style confirmation card, mirroring the vendor/planner tracker fields
   const restartEl = document.getElementById('vm-card-restart');
@@ -877,7 +884,26 @@ function runByoInvite(a){
 function runFlow(flow){
   const a = STATE[flow].answers;
   if(flow==='cie'){
-    const sys=`You are the Marigold Cultural Intelligence Engine.\nRULES:\n1. Draw only from culturally verified information. Where uncertain say "confirm with your officiant and family."\n2. Never suggest one tradition takes priority over another.\n3. Size-aware: Micro/intimate = shorter checklist, experience-first budget. Large/grand = delegation-first.\n4. Tariff: flag imported textiles (lehenga, aso-ebi) and florals (Indian marigolds, jasmine) as tariff-sensitive. Recommend price-lock deposits.\n5. Destination: flag marriage recognition at home country, visa requirements, travel advisories.\n6. Interfaith: include a "Conflict flags" section \u2014 decisions framed as choices not problems.\n7. Close with: "Confirm all ceremony details with your officiant and families before booking."\nFORMATTING: Use clean markdown. ## for section headings (sentence case). Use a real markdown table with | pipes for any budget breakdown \u2014 every table row, including the header and separator, MUST be written as exactly one single line with no line breaks inside it; keep cell contents short (a few words) so this is easy, never wrap a row across two lines, and never insert a blank line between table rows \u2014 the entire table (header, separator, and every data row) must be a single unbroken block of consecutive lines with zero blank lines anywhere inside it. Use **bold** sparingly for key numbers or terms only. Short paragraphs.\nALWAYS include one section with the exact heading "## Checklist" containing a flat bullet list (- item) of concrete, actionable to-do items the couple can check off \u2014 no nested sub-bullets, no sub-headings inside that section.\nWrite in a warm editorial voice. Specific and useful.`;
+    const sys=`You are the Marigold Cultural Intelligence Engine.
+RULES:
+1. Draw only from culturally verified information. Where uncertain say "confirm with your officiant and family."
+2. Never suggest one tradition takes priority over another.
+3. Size-aware: Micro/intimate = shorter checklist, experience-first budget. Large/grand = delegation-first.
+4. Tariff: flag imported textiles (lehenga, aso-ebi) and florals (Indian marigolds, jasmine) as tariff-sensitive. Recommend price-lock deposits.
+5. Destination: flag marriage recognition at home country, visa requirements, travel advisories.
+6. Interfaith: include a "Conflict flags" section \u2014 decisions framed as choices not problems.
+7. Close with: "Confirm all ceremony details with your officiant and families before booking."
+
+FORMATTING \u2014 this must read like a scannable planning document, not an essay:
+- Every section opens with ## and a short sentence-case heading.
+- NO long paragraphs anywhere, including the overview. Maximum 2 sentences per paragraph. If you have more to say, break it into a bulleted list instead of a paragraph.
+- Prefer bullet points over prose wherever there is a list of items, options, or considerations \u2014 which is most of this content.
+- Use a real markdown table with | pipes for any budget breakdown. Every row, including header and separator, is exactly one line, no blank lines between rows, short cell contents.
+- Use **bold** only for key numbers, dates, or single important terms \u2014 never whole sentences.
+- ALWAYS include one section with the exact heading "## Checklist" containing a flat bullet list (- item) of concrete, actionable to-do items \u2014 no nested sub-bullets, no sub-headings inside that section.
+- Total length: aim for something a person can skim in under a minute, not read end to end. When in doubt, cut prose and convert to bullets.
+
+Tone: warm but brief. Specific and useful over eloquent.`;
     ask(sys, ctx()+'\n\nFOCUS: '+a.focus+'\n\nGenerate the wedding plan.', 'cie-res','cie-out','run-cie','Generate my plan', {checklistMode:true, idPrefix:'cie'}, 'cie', 3000);
   } else if(flow==='vendor'){
     if(a.source === 'bring my own'){
@@ -939,12 +965,13 @@ function chooseFreeText(){
   card.innerHTML =
     '<div class="ql">Tell us everything</div>'+
     '<div class="qt">What\u2019s your vision?</div>'+
-    '<div class="free-hint">For example: names, the traditions you\u2019re blending, roughly how many guests, where, your budget range, and when. Write it like you\u2019re telling a friend.</div>'+
-    '<textarea class="free-area" id="free-text" placeholder="We\u2019re Rachel and Arjun \u2014 I\u2019m Jewish, he\u2019s Hindu (Punjabi). We\u2019re thinking around 120 guests in the New York area next June, budget somewhere around $75,000. Both families are moderately observant and we want both ceremonies represented..."></textarea>'+
+    '<div class="free-hint">Write it like you\u2019re telling a friend \u2014 your names, the traditions you\u2019re blending, roughly how many guests, where, your budget range, and when. For example: "We\u2019re Rachel and Arjun \u2014 I\u2019m Jewish, he\u2019s Hindu (Punjabi). Around 120 guests in the New York area next June, budget around $75,000, both families moderately observant."</div>'+
+    '<textarea class="free-area" id="free-text" placeholder="Start typing here..."></textarea>'+
     '<div class="qnav">'+
       '<button class="cta" id="extract-btn" onclick="extractFromFreeText()">Continue <span class="arr">\u2192</span></button>'+
       '<button class="back-link" onclick="renderIntro()">back</button>'+
-    '</div>';
+    '</div>'+
+    '<div id="free-text-warning"></div>';
   document.getElementById('free-text').focus();
 }
 
@@ -959,11 +986,18 @@ function goTabRaw(id){
 
 async function extractFromFreeText(){
   const text = document.getElementById('free-text').value.trim();
-  if(!text){ chooseGuided(); return; }
+  if(!text){
+    const warnEl = document.getElementById('free-text-warning');
+    if(warnEl){
+      warnEl.innerHTML = '<div class="extracted-note" style="border-left:2px solid var(--gd)">Looks like the box is still empty \u2014 type a few sentences about your wedding first, or use "Guide me through it" instead.</div>';
+    }
+    document.getElementById('free-text').focus();
+    return;
+  }
 
   const btn = document.getElementById('extract-btn');
   btn.disabled = true;
-  btn.innerHTML = 'Reading\u2026 ' + marigoldSpinnerSVG(16);
+  btn.innerHTML = marigoldSpinnerSVG(16) + ' Reading what you wrote\u2026';
 
   const sys = `You extract structured wedding-planning details from free text.
 CRITICAL: Your entire response must be ONLY the JSON object \u2014 nothing else. No preamble such as "Here is the data", no markdown code fences, no closing remarks or explanation. The very first character of your response must be { and the very last character must be }.
