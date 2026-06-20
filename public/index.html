@@ -35,17 +35,17 @@ html,body{min-height:100vh;background:var(--cream);color:var(--tx);font-family:'
 .ctx{background:var(--warm);border-radius:8px;padding:11px 16px;margin-bottom:32px;display:flex;align-items:center;gap:8px;flex-wrap:wrap;font-size:12px;color:var(--deep);font-style:italic;line-height:1.5}
 .ctx-edit{margin-left:auto;font-size:10px;letter-spacing:1px;color:var(--muted);cursor:pointer;background:none;border:none;font-family:'Playfair Display',Georgia,serif;text-decoration:underline;flex-shrink:0}
 
-/* ---- conversational transcript ---- */
-.transcript{margin-bottom:8px}
-.t-row{margin-bottom:22px;animation:rise .35s ease both}
+/* ---- quiet progress indicator ---- */
+.progress-wrap{margin-bottom:28px}
+.progress-track{height:2px;background:var(--bdr);border-radius:2px;overflow:hidden;margin-bottom:10px}
+.progress-fill{height:100%;background:var(--gd);transition:width .35s ease}
+.progress-label{display:flex;align-items:center;justify-content:space-between;font-size:11px;color:var(--muted);font-style:italic}
+.progress-edit{background:none;border:none;color:var(--muted);font-size:11px;letter-spacing:.5px;text-decoration:underline;cursor:pointer;font-family:'Playfair Display',Georgia,serif}
+.start-over{background:none;border:none;color:var(--muted);font-size:11px;letter-spacing:1px;text-decoration:underline;cursor:pointer;font-family:'Playfair Display',Georgia,serif;margin-bottom:18px;display:inline-block}
 @keyframes rise{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:translateY(0)}}
-.t-q{font-size:10px;letter-spacing:2px;text-transform:uppercase;color:var(--muted);margin-bottom:6px}
-.t-q-text{font-size:16px;color:var(--deep);font-style:italic;margin-bottom:8px}
-.t-a{display:inline-flex;align-items:center;gap:8px;background:var(--deep);color:var(--cream);padding:7px 16px;border-radius:100px;font-size:13px;font-style:italic}
-.t-a-edit{background:none;border:none;color:var(--muted);font-size:10px;letter-spacing:1px;text-decoration:underline;cursor:pointer;font-family:'Playfair Display',Georgia,serif;margin-left:4px}
 
 /* ---- active question card ---- */
-.qcard{animation:rise .4s ease both}
+.qcard{animation:rise .35s ease both}
 .ql{font-size:10px;letter-spacing:2px;text-transform:uppercase;color:var(--muted);margin-bottom:8px}
 .qt{font-size:24px;line-height:1.3;color:var(--deep);font-style:italic;font-weight:400;margin-bottom:6px}
 .qs{font-size:13px;color:var(--muted);margin-bottom:18px;font-style:normal}
@@ -53,7 +53,7 @@ html,body{min-height:100vh;background:var(--cream);color:var(--tx);font-family:'
 .pg{display:flex;flex-wrap:wrap;gap:7px;margin-bottom:18px}
 .p{padding:9px 18px;border-radius:100px;border:1px solid var(--bdr);font-size:14px;color:var(--tx);cursor:pointer;background:#fff;font-family:'Playfair Display',Georgia,serif;font-style:italic;transition:all .15s}
 .p:hover{border-color:var(--gd);background:var(--warm)}
-.p.on{border-color:var(--deep);background:var(--deep);color:var(--cream)}
+.p.on{border-color:var(--gk);background:var(--g);color:var(--deep);font-weight:500}
 
 .fi{width:100%;border:none;border-bottom:1px solid var(--bdr);padding:10px 0;font-size:18px;font-family:'Playfair Display',Georgia,serif;font-style:italic;color:var(--tx);background:transparent;outline:none;transition:border-color .2s;margin-bottom:18px}
 .fi:focus{border-bottom-color:var(--deep)}
@@ -94,6 +94,15 @@ textarea.fi{border:1px solid var(--bdr);border-radius:8px;padding:12px 14px;resi
 .out-body tr:last-child td{border-bottom:none}
 .out-body tr:nth-child(even) td{background:rgba(0,0,0,0.012)}
 
+.out-body ul.checklist{list-style:none;padding-left:0;margin:0 0 18px}
+.out-body ul.checklist li.check-item{margin-bottom:2px}
+.out-body ul.checklist label{display:flex;align-items:flex-start;gap:10px;padding:9px 10px;border-radius:8px;cursor:pointer;transition:background .15s}
+.out-body ul.checklist label:hover{background:var(--warm)}
+.out-body ul.checklist input[type="checkbox"]{margin-top:3px;width:16px;height:16px;accent-color:var(--deep);cursor:pointer;flex-shrink:0}
+.out-body ul.checklist label span{font-family:Georgia,serif;font-size:14px;line-height:1.6;transition:color .15s}
+.out-body ul.checklist li.checked label span{color:var(--muted);text-decoration:line-through;text-decoration-color:var(--bdr)}
+.checklist-note{font-size:11px;color:var(--muted);font-style:italic;margin:-10px 0 18px;padding-left:10px}
+
 .restart{margin-top:28px;text-align:center}
 .restart button{background:none;border:none;color:var(--muted);font-size:11px;letter-spacing:1px;text-decoration:underline;cursor:pointer;font-family:'Playfair Display',Georgia,serif}
 
@@ -113,7 +122,7 @@ textarea.fi{border:1px solid var(--bdr);border-radius:8px;padding:12px 14px;resi
 <body>
 
 <div class="wrap">
-  <div class="brand">
+  <div class="brand" style="cursor:pointer" onclick="goTab('intro',0,document.querySelector('.tab'))" title="Back to the beginning">
     <svg width="26" height="26" viewBox="0 0 34 34" xmlns="http://www.w3.org/2000/svg">
       <g fill="#E0B030" stroke="#C8941A" stroke-width="0.4">
         <ellipse cx="17" cy="5.8" rx="1.9" ry="4.4" transform="rotate(0 17 17)"/>
@@ -280,13 +289,16 @@ const FLOWS = {
     ], display:{'find recommendations':'Find recommendations for me','bring my own':'I already have someone in mind'}, default:'find recommendations'},
     {key:'cat', label:'Agent two \u00b7 find vendors', text:'Who are you looking for?', type:'choice', options:[
       'mehndi / henna artist','multi-faith officiant','wedding planner','South Asian wedding photographer','kosher-certified caterer','South Asian vegetarian caterer','Nigerian Yoruba caterer','dhol player for baraat','were \u2014 Yoruba praise singer','South Asian florist \u2014 marigolds and jasmine','Jewish chuppah florist','gele tyer','South Asian bridal hair and makeup'
-    ], display:{'mehndi / henna artist':'Mehndi artist','multi-faith officiant':'Multi-faith officiant','wedding planner':'Wedding planner','South Asian wedding photographer':'South Asian photographer','kosher-certified caterer':'Kosher caterer','South Asian vegetarian caterer':'South Asian caterer','Nigerian Yoruba caterer':'Nigerian caterer','dhol player for baraat':'Dhol player','were \u2014 Yoruba praise singer':'Were','South Asian florist \u2014 marigolds and jasmine':'South Asian florist','Jewish chuppah florist':'Chuppah florist','gele tyer':'Gele tyer','South Asian bridal hair and makeup':'Hair & makeup'}, default:'mehndi / henna artist'},
+    ], display:{'mehndi / henna artist':'Mehndi artist','multi-faith officiant':'Multi-faith officiant','wedding planner':'Wedding planner','South Asian wedding photographer':'South Asian photographer','kosher-certified caterer':'Kosher caterer','South Asian vegetarian caterer':'South Asian caterer','Nigerian Yoruba caterer':'Nigerian caterer','dhol player for baraat':'Dhol player','were \u2014 Yoruba praise singer':'Were','South Asian florist \u2014 marigolds and jasmine':'South Asian florist','Jewish chuppah florist':'Chuppah florist','gele tyer':'Gele tyer','South Asian bridal hair and makeup':'Hair & makeup'}, default:'mehndi / henna artist', showIf:{source:'find recommendations'}},
     {key:'bud', label:'Budget', text:'What\u2019s your budget for this vendor?', type:'choice', options:[
       'under $500','$500\u2013$1,500','$1,500\u2013$3,500','$3,500\u2013$8,000','$8,000+'
     ], default:'$500\u2013$1,500', showIf:{source:'find recommendations'}},
     {key:'date', label:'Event date', text:'When do you need them?', type:'text', placeholder:'e.g. June 12, 2026', default:'June 12, 2026', showIf:{source:'find recommendations'}},
     {key:'byo_name', label:'Their details', text:'What\u2019s their name?', sub:'Personal name or business name.', type:'text', placeholder:'e.g. Nisha Sharma, Mehndisha', default:'', showIf:{source:'bring my own'}},
     {key:'byo_business', label:'Their details', text:'What\u2019s their business called?', sub:'Leave blank if they work under their own name.', type:'text', placeholder:'e.g. Mehndisha', default:'', showIf:{source:'bring my own'}},
+    {key:'byo_cat', label:'Their details', text:'What do they do?', type:'choice', options:[
+      'mehndi / henna artist','multi-faith officiant','wedding planner','South Asian wedding photographer','kosher-certified caterer','South Asian vegetarian caterer','Nigerian Yoruba caterer','dhol player for baraat','were \u2014 Yoruba praise singer','South Asian florist \u2014 marigolds and jasmine','Jewish chuppah florist','gele tyer','South Asian bridal hair and makeup'
+    ], display:{'mehndi / henna artist':'Mehndi artist','multi-faith officiant':'Multi-faith officiant','wedding planner':'Wedding planner','South Asian wedding photographer':'South Asian photographer','kosher-certified caterer':'Kosher caterer','South Asian vegetarian caterer':'South Asian caterer','Nigerian Yoruba caterer':'Nigerian caterer','dhol player for baraat':'Dhol player','were \u2014 Yoruba praise singer':'Were','South Asian florist \u2014 marigolds and jasmine':'South Asian florist','Jewish chuppah florist':'Chuppah florist','gele tyer':'Gele tyer','South Asian bridal hair and makeup':'Hair & makeup'}, default:'mehndi / henna artist', showIf:{source:'bring my own'}},
     {key:'byo_email', label:'Their details', text:'What\u2019s the best email to reach them?', type:'text', placeholder:'name@example.com', default:'', showIf:{source:'bring my own'}},
     {key:'byo_instagram', label:'Their details', text:'Do they have an Instagram or website?', sub:'Optional \u2014 leave blank to skip.', type:'text', placeholder:'@handle or website.com', default:'', showIf:{source:'bring my own'}},
     {key:'byo_source', label:'Their details', text:'How did you find them?', type:'choice', options:[
@@ -342,17 +354,28 @@ function renderTranscript(flow){
   const tEl = document.getElementById('tr-'+flow);
   const qs = FLOWS[flow];
   const st = STATE[flow];
-  let html = '';
-  for(let i=0;i<st.idx;i++){
-    const q = qs[i];
-    const val = st.answers[q.key];
-    if(val===undefined || val==='') continue;
-    html += '<div class="t-row">'+
-      '<div class="t-q">'+q.label+'</div>'+
-      '<div class="t-q-text">'+q.text+'</div>'+
-      '<span class="t-a">'+flowDisplay(q,val)+'<button class="t-a-edit" onclick="jumpTo(\''+flow+'\','+i+')">edit</button></span>'+
-      '</div>';
+
+  // count only applicable questions for an honest progress total
+  const applicable = qs.filter(q => questionApplies(flow, q));
+  const answeredApplicable = applicable.filter(q => st.answers[q.key] !== undefined && st.answers[q.key] !== '').length;
+  const total = applicable.length;
+  const pct = total ? Math.round((answeredApplicable/total)*100) : 0;
+
+  let lastAnswered = -1;
+  for(let i=st.idx-1;i>=0;i--){
+    if(st.answers[qs[i].key]!==undefined && st.answers[qs[i].key]!==''){ lastAnswered = i; break; }
   }
+
+  let html = '';
+  const startOverLabel = flow==='setup' ? '\u2190 back to the beginning' : '\u2190 start over';
+  html += '<button class="start-over" onclick="goTab(\'intro\',0,document.querySelectorAll(\'.tab\')[0])">'+startOverLabel+'</button>';
+  html += '<div class="progress-wrap"><div class="progress-track"><div class="progress-fill" style="width:'+pct+'%"></div></div>';
+  html += '<div class="progress-label"><span>'+answeredApplicable+' of '+total+' answered</span>';
+  if(lastAnswered>=0){
+    html += '<button class="progress-edit" onclick="jumpTo(\''+flow+'\','+lastAnswered+')">edit last answer</button>';
+  }
+  html += '</div></div>';
+
   tEl.innerHTML = html;
 }
 
@@ -416,7 +439,7 @@ function renderQuestion(flow){
 
   inner += '<div class="qnav">';
   inner += '<button class="cta" id="next-'+flow+'" onclick="advance(\''+flow+'\')">Next <span class="arr">\u2192</span></button>';
-  if(st.idx>0 || (flow!=='setup')) inner += '<button class="back-link" onclick="goBack(\''+flow+'\')">back</button>';
+  inner += '<button class="back-link" onclick="goBack(\''+flow+'\')">\u2190 back</button>';
   inner += '</div>';
 
   card.innerHTML = inner;
@@ -432,7 +455,7 @@ function renderQuestion(flow){
         } else {
           wrap.querySelectorAll('.p').forEach(x=>x.classList.remove('on'));
           b.classList.add('on');
-          advance(flow); // auto-advance on single-select tap
+          setTimeout(()=>advance(flow), 280); // brief pause so the selection is visible before advancing
         }
       });
     });
@@ -484,6 +507,13 @@ function goBack(flow){
     }
     renderTranscript(flow);
     renderQuestion(flow);
+  } else {
+    // already at the first question \u2014 go to the previous screen in the journey
+    if(flow==='setup'){
+      goTab('intro', 0, document.querySelectorAll('.tab')[0]);
+    } else {
+      goTab('setup', 0, document.querySelectorAll('.tab')[0]);
+    }
   }
 }
 
@@ -534,7 +564,9 @@ function goTab(id, di, tabEl){
   if(tabEl) tabEl.classList.add('on');
   setDots(di);
   syncCtx();
-  if(id!=='setup'){
+  if(id==='intro'){
+    renderIntro();
+  } else if(id!=='setup'){
     renderTranscript(id);
     renderQuestion(id);
   }
@@ -552,7 +584,27 @@ function syncCtx(){
 }
 
 /* ============ MARKDOWN RENDERER ============ */
-function renderMD(src){
+/* ============ CHECKLIST PERSISTENCE (localStorage) ============ */
+function simpleHash(str){
+  let hash = 0;
+  for(let i=0;i<str.length;i++){
+    hash = ((hash<<5)-hash) + str.charCodeAt(i);
+    hash |= 0;
+  }
+  return Math.abs(hash).toString(36);
+}
+
+function onChecklistToggle(input){
+  const li = input.closest('li');
+  li.classList.toggle('checked', input.checked);
+  try{
+    if(input.checked){ localStorage.setItem(input.dataset.key, '1'); }
+    else { localStorage.removeItem(input.dataset.key); }
+  }catch(e){ /* localStorage unavailable \u2014 state just won't persist across reloads */ }
+}
+
+function renderMD(src, opts){
+  opts = opts || {};
   if(!src) return '';
   let s = src.replace(/\r\n/g,'\n');
   s = s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
@@ -561,9 +613,17 @@ function renderMD(src){
   let html = '';
   let i = 0;
   let inList = null;
+  let inChecklist = false;
+  let cbCounter = 0;
+  const idPrefix = opts.idPrefix || 'cb';
 
   function closeList(){
-    if(inList){ html += inList==='ul' ? '</ul>' : '</ol>'; inList = null; }
+    if(inList){
+      const wasChecklist = inChecklist;
+      html += inList==='ul' ? '</ul>' : '</ol>';
+      if(wasChecklist){ html += '<p class="checklist-note">Saved to this browser \u2014 your checkmarks will still be here next time you open this page on this device.</p>'; }
+      inList = null; inChecklist = false;
+    }
   }
 
   function inline(t){
@@ -595,15 +655,24 @@ function renderMD(src){
     }
 
     let m;
-    if((m = /^###\s+(.*)$/.exec(line))){ closeList(); html += '<h3>'+inline(m[1])+'</h3>'; i++; continue; }
-    if((m = /^##\s+(.*)$/.exec(line))){ closeList(); html += '<h2>'+inline(m[1])+'</h2>'; i++; continue; }
-    if((m = /^#\s+(.*)$/.exec(line))){ closeList(); html += '<h1>'+inline(m[1])+'</h1>'; i++; continue; }
+    if((m = /^###\s+(.*)$/.exec(line))){ closeList(); inChecklist = opts.checklistMode && /checklist|to-?do|tasks/i.test(m[1]); html += '<h3>'+inline(m[1])+'</h3>'; i++; continue; }
+    if((m = /^##\s+(.*)$/.exec(line))){ closeList(); inChecklist = opts.checklistMode && /checklist|to-?do|tasks/i.test(m[1]); html += '<h2>'+inline(m[1])+'</h2>'; i++; continue; }
+    if((m = /^#\s+(.*)$/.exec(line))){ closeList(); inChecklist = opts.checklistMode && /checklist|to-?do|tasks/i.test(m[1]); html += '<h1>'+inline(m[1])+'</h1>'; i++; continue; }
 
     if(/^\s*---+\s*$/.test(line)){ closeList(); html += '<hr>'; i++; continue; }
 
     if((m = /^\s*[-*]\s+(.*)$/.exec(line))){
-      if(inList !== 'ul'){ closeList(); html += '<ul>'; inList = 'ul'; }
-      html += '<li>'+inline(m[1])+'</li>';
+      if(inList !== 'ul'){ closeList(); html += inChecklist ? '<ul class="checklist">' : '<ul>'; inList = 'ul'; }
+      if(inChecklist){
+        cbCounter++;
+        const cid = idPrefix+'-'+cbCounter;
+        const itemKey = 'marigold-checklist:'+simpleHash(m[1]);
+        let isChecked = false;
+        try{ isChecked = localStorage.getItem(itemKey) === '1'; }catch(e){}
+        html += '<li class="check-item'+(isChecked?' checked':'')+'"><label><input type="checkbox" id="'+cid+'" data-key="'+itemKey+'"'+(isChecked?' checked':'')+' onchange="onChecklistToggle(this)"><span>'+inline(m[1])+'</span></label></li>';
+      } else {
+        html += '<li>'+inline(m[1])+'</li>';
+      }
       i++; continue;
     }
 
@@ -641,7 +710,7 @@ function ctx(){
 }
 
 /* ============ API CALL ============ */
-async function ask(sys,usr,resId,outId,btnId,lbl){
+async function ask(sys,usr,resId,outId,btnId,lbl,renderOpts){
   const btn=document.getElementById(btnId);
   const out=document.getElementById(outId);
   const res=document.getElementById(resId);
@@ -663,7 +732,7 @@ async function ask(sys,usr,resId,outId,btnId,lbl){
     if(d.error)throw new Error(d.error.message);
     res.className='out-body';
     const raw=(d.content||[]).map(b=>b.text||'').join('');
-    res.innerHTML=renderMD(raw);
+    res.innerHTML=renderMD(raw, renderOpts);
   }catch(e){
     res.className='out-body';
     res.innerHTML='<p style="color:var(--muted);font-style:italic">\u26a0 '+String(e.message).replace(/&/g,'&amp;').replace(/</g,'&lt;')+'</p>';
@@ -678,7 +747,7 @@ function runByoInvite(a){
   ey.textContent = 'Your invite \u2014 review before sending';
 
   const displayName = a.byo_business ? (a.byo_name+' \u2014 '+a.byo_business) : a.byo_name;
-  const catLabel = (FLOWS.vendor.find(q=>q.key==='cat').display||{})[a.cat] || a.cat;
+  const catLabel = (FLOWS.vendor.find(q=>q.key==='byo_cat').display||{})[a.byo_cat] || a.byo_cat;
 
   const sys = `You are the Marigold Inquiry Drafter, generating a first invite to a vendor the couple already knows and wants to bring onto Marigold.\nRULES:\n1. This is an INVITE, not a cold inquiry \u2014 the couple already has a relationship with this person. Reference how the couple found them naturally (the "source" given).\n2. Warm, personal, genuine \u2014 never salesy or templated.\n3. Briefly explain Marigold in one sentence: a culturally-intelligent wedding marketplace connecting couples with vendors who understand their traditions.\n4. Include the event name, date, guest count, and budget range so they immediately understand the opportunity.\n5. Maximum 150 words.\n6. Never open with "I hope this email finds you well."\n7. End with: [Review before sending \u2014 personalise the opening and confirm all details]\nAfter the draft, add one line: Cultural details included: (one line, or "none" if not applicable)`;
 
@@ -707,8 +776,8 @@ function runByoInvite(a){
 function runFlow(flow){
   const a = STATE[flow].answers;
   if(flow==='cie'){
-    const sys=`You are the Marigold Cultural Intelligence Engine.\nRULES:\n1. Draw only from culturally verified information. Where uncertain say "confirm with your officiant and family."\n2. Never suggest one tradition takes priority over another.\n3. Size-aware: Micro/intimate = shorter checklist, experience-first budget. Large/grand = delegation-first.\n4. Tariff: flag imported textiles (lehenga, aso-ebi) and florals (Indian marigolds, jasmine) as tariff-sensitive. Recommend price-lock deposits.\n5. Destination: flag marriage recognition at home country, visa requirements, travel advisories.\n6. Interfaith: include a "Conflict flags" section \u2014 decisions framed as choices not problems.\n7. Close with: "Confirm all ceremony details with your officiant and families before booking."\nFORMATTING: Use clean markdown. ## for section headings (sentence case). Use a real markdown table with | pipes for any budget breakdown. Use **bold** sparingly for key numbers or terms only. Short paragraphs. Bullet lists for checklist items.\nWrite in a warm editorial voice. Specific and useful.`;
-    ask(sys, ctx()+'\n\nFOCUS: '+a.focus+'\n\nGenerate the wedding plan.', 'cie-res','cie-out','run-cie','Generate my plan');
+    const sys=`You are the Marigold Cultural Intelligence Engine.\nRULES:\n1. Draw only from culturally verified information. Where uncertain say "confirm with your officiant and family."\n2. Never suggest one tradition takes priority over another.\n3. Size-aware: Micro/intimate = shorter checklist, experience-first budget. Large/grand = delegation-first.\n4. Tariff: flag imported textiles (lehenga, aso-ebi) and florals (Indian marigolds, jasmine) as tariff-sensitive. Recommend price-lock deposits.\n5. Destination: flag marriage recognition at home country, visa requirements, travel advisories.\n6. Interfaith: include a "Conflict flags" section \u2014 decisions framed as choices not problems.\n7. Close with: "Confirm all ceremony details with your officiant and families before booking."\nFORMATTING: Use clean markdown. ## for section headings (sentence case). Use a real markdown table with | pipes for any budget breakdown. Use **bold** sparingly for key numbers or terms only. Short paragraphs.\nALWAYS include one section with the exact heading "## Checklist" containing a flat bullet list (- item) of concrete, actionable to-do items the couple can check off \u2014 no nested sub-bullets, no sub-headings inside that section.\nWrite in a warm editorial voice. Specific and useful.`;
+    ask(sys, ctx()+'\n\nFOCUS: '+a.focus+'\n\nGenerate the wedding plan.', 'cie-res','cie-out','run-cie','Generate my plan', {checklistMode:true, idPrefix:'cie'});
   } else if(flow==='vendor'){
     if(a.source === 'bring my own'){
       runByoInvite(a);
