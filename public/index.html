@@ -22,6 +22,13 @@ html,body{min-height:100vh;background:var(--cream);color:var(--tx);font-family:'
 .dot.done{background:var(--gd)}
 .dot.now{background:var(--deep);width:7px;height:7px}
 
+.account-bar{display:flex;align-items:center;gap:10px;padding:8px 24px;font-size:11px;border-bottom:1px solid var(--bdr);background:var(--warm);flex-wrap:wrap}
+.account-bar:empty{display:none}
+.account-link{background:none;border:none;color:var(--deep);text-decoration:underline;cursor:pointer;font-size:11px;font-family:Georgia,serif;padding:0}
+.account-email{font-weight:700;color:var(--deep)}
+.account-saved{color:var(--muted);font-style:italic}
+.account-error{color:#a04a1a;font-style:italic}
+
 .tabs{display:flex;border-bottom:1px solid var(--bdr);padding:0 24px;overflow-x:auto;background:var(--cream)}
 .tab{padding:10px 0;margin-right:24px;font-size:11px;letter-spacing:1.5px;color:var(--muted);cursor:pointer;border:none;border-bottom:2px solid transparent;background:transparent;font-family:'Playfair Display',Georgia,serif;transition:all .2s;white-space:nowrap;flex-shrink:0}
 .tab:hover{color:var(--deep)}
@@ -112,6 +119,12 @@ textarea.fi{border:1px solid var(--bdr);border-radius:8px;padding:12px 14px;resi
 .out-body tr:last-child td{border-bottom:none}
 .out-body tr:nth-child(even) td{background:rgba(0,0,0,0.012)}
 
+.out-body ul.cols{column-count:3;column-gap:28px;padding-left:0;list-style:none}
+.out-body ul.cols li{break-inside:avoid;padding-left:16px;position:relative;margin-bottom:10px}
+.out-body ul.cols li::before{content:'\2022';position:absolute;left:0;color:var(--gd)}
+@media (max-width:820px){.out-body ul.cols{column-count:2}}
+@media (max-width:560px){.out-body ul.cols{column-count:1}}
+
 .out-body ul.checklist{list-style:none;padding-left:0;margin:0 0 18px}
 .out-body ul.checklist li.check-item{margin-bottom:2px}
 .out-body ul.checklist label{display:flex;align-items:flex-start;gap:10px;padding:9px 10px;border-radius:8px;cursor:pointer;transition:background .15s}
@@ -132,6 +145,7 @@ textarea.fi{border:1px solid var(--bdr);border-radius:8px;padding:12px 14px;resi
 .free-area{width:100%;border:1px solid var(--bdr);border-radius:10px;padding:16px;font-size:14px;font-family:Georgia,serif;font-style:normal;color:var(--tx);resize:vertical;min-height:160px;outline:none;background:#fff;margin-bottom:18px}
 .free-area:focus{border-color:var(--gd)}
 .free-hint{font-size:12px;color:var(--muted);font-style:italic;margin-bottom:14px;line-height:1.6}
+.why-line{font-size:13px;color:var(--tx);line-height:1.7;margin-bottom:22px;padding-left:14px;border-left:2px solid var(--gd)}
 .extracted-note{background:var(--warm);border-radius:8px;padding:12px 16px;font-size:12px;color:var(--deep);font-style:italic;margin-bottom:24px;line-height:1.6}
 
 @media(max-width:600px){.body{padding:28px 16px 70px}.qt{font-size:21px}.choice-cards{grid-template-columns:1fr}}
@@ -208,6 +222,8 @@ textarea.fi{border:1px solid var(--bdr);border-radius:8px;padding:12px 14px;resi
     <div class="dot" id="d3"></div>
   </div>
 </div>
+
+<div class="account-bar" id="account-bar"></div>
 
 <div class="tabs">
   <button class="tab"  onclick="goTab('setup',0,this)">Your details</button>
@@ -592,6 +608,7 @@ function finalizeSetup(){
   ['tab-cie','tab-vendor','tab-inquiry','tab-guest'].forEach(id=>document.getElementById(id).disabled=false);
   syncCtx();
   document.getElementById('qc-setup').innerHTML = '<div class="qt" style="margin-bottom:18px">All set, '+W.p1+' & '+W.p2+'.</div><button class="cta" onclick="goTab(\'cie\',1,document.querySelectorAll(\'.tab\')[1])">See your plan <span class="arr">\u2192</span></button>';
+  if(AUTH.email){ saveCurrentPlan(true); }
 }
 
 function showRunButton(flow){
@@ -730,15 +747,21 @@ function renderMD(src, opts){
   let i = 0;
   let inList = null;
   let inChecklist = false;
+  let listItems = [];
   let cbCounter = 0;
   const idPrefix = opts.idPrefix || 'cb';
 
   function closeList(){
     if(inList){
       const wasChecklist = inChecklist;
-      html += inList==='ul' ? '</ul>' : '</ol>';
+      if(inList === 'ul'){
+        const useCols = !wasChecklist && listItems.length >= 5;
+        html += '<ul'+(wasChecklist?' class="checklist"':(useCols?' class="cols"':''))+'>'+listItems.join('')+'</ul>';
+      } else {
+        html += '<ol>'+listItems.join('')+'</ol>';
+      }
       if(wasChecklist){ html += '<p class="checklist-note">Saved to this browser \u2014 your checkmarks will still be here next time you open this page on this device.</p>'; }
-      inList = null; inChecklist = false;
+      inList = null; inChecklist = false; listItems = [];
     }
   }
 
@@ -786,23 +809,23 @@ function renderMD(src, opts){
     if(/^\s*---+\s*$/.test(line)){ closeList(); html += '<hr>'; i++; continue; }
 
     if((m = /^\s*[-*]\s+(.*)$/.exec(line))){
-      if(inList !== 'ul'){ closeList(); html += inChecklist ? '<ul class="checklist">' : '<ul>'; inList = 'ul'; }
+      if(inList !== 'ul'){ closeList(); inList = 'ul'; }
       if(inChecklist){
         cbCounter++;
         const cid = idPrefix+'-'+cbCounter;
         const itemKey = 'marigold-checklist:'+simpleHash(m[1]);
         let isChecked = false;
         try{ isChecked = localStorage.getItem(itemKey) === '1'; }catch(e){}
-        html += '<li class="check-item'+(isChecked?' checked':'')+'"><label><input type="checkbox" id="'+cid+'" data-key="'+itemKey+'"'+(isChecked?' checked':'')+' onchange="onChecklistToggle(this)"><span>'+inline(m[1])+'</span></label></li>';
+        listItems.push('<li class="check-item'+(isChecked?' checked':'')+'"><label><input type="checkbox" id="'+cid+'" data-key="'+itemKey+'"'+(isChecked?' checked':'')+' onchange="onChecklistToggle(this)"><span>'+inline(m[1])+'</span></label></li>');
       } else {
-        html += '<li>'+inline(m[1])+'</li>';
+        listItems.push('<li>'+inline(m[1])+'</li>');
       }
       i++; continue;
     }
 
     if((m = /^\s*\d+\.\s+(.*)$/.exec(line))){
-      if(inList !== 'ol'){ closeList(); html += '<ol>'; inList = 'ol'; }
-      html += '<li>'+inline(m[1])+'</li>';
+      if(inList !== 'ol'){ closeList(); inList = 'ol'; }
+      listItems.push('<li>'+inline(m[1])+'</li>');
       i++; continue;
     }
 
@@ -829,10 +852,22 @@ function ctx(){
   const isDest = W.loc.toLowerCase().includes('destination');
   const isIndia = W.loc.toLowerCase().includes('india');
   const tradLine = W.tr.map(t => (t==='Hindu' && W.hinduRegion) ? 'Hindu ('+W.hinduRegion+')' : t).join(' + ');
-  return ['WEDDING CONTEXT:','Couple: '+W.p1+' and '+W.p2,'Traditions: '+tradLine+(isIF?' \u2014 INTERFAITH WEDDING':''),'Size: '+W.sz,'Budget: '+W.bud,'Date: '+W.dt,'Location: '+W.loc,'Observance: '+W.obs,
+  const lines = ['WEDDING CONTEXT:','Couple: '+W.p1+' and '+W.p2,'Traditions: '+tradLine+(isIF?' \u2014 INTERFAITH WEDDING':''),'Size: '+W.sz,'Budget: '+W.bud,'Date: '+W.dt,'Location: '+W.loc,'Observance: '+W.obs,
     isDest?'DESTINATION WEDDING \u2014 apply all destination checks: legal marriage recognition, visa requirements for international guests, travel advisory monitoring, Stripe market availability, currency risk.':'',
     isIndia?'LOCATION IS INDIA \u2014 quote all costs in INR with an approximate USD equivalent in parentheses, using realistic Indian market rates for the couple\u2019s stated quality/size tier, not a scaled-down US price.':''
-  ].filter(Boolean).join('\n');
+  ];
+  // If a ceremony sequence has already been generated in the plan, surface its plain text
+  // so other agents (like the day-of schedule message) stay consistent with it instead of
+  // independently re-deriving the list of events.
+  const cached = STATE.cie && STATE.cie.resultsByFocus;
+  if(cached){
+    const anyResult = Object.values(cached)[0];
+    if(anyResult && anyResult.bodyHTML){
+      const plain = anyResult.bodyHTML.replace(/<[^>]+>/g,' ').replace(/\s+/g,' ').trim();
+      if(plain) lines.push('ALREADY-GENERATED PLAN CONTENT (for reference/consistency only, do not repeat verbatim): '+plain.slice(0,1200));
+    }
+  }
+  return lines.filter(Boolean).join('\n');
 }
 
 /* ============ API CALL ============ */
@@ -876,6 +911,7 @@ async function ask(sys,usr,resId,outId,btnId,lbl,renderOpts,flow,maxTokens,loadi
     if(flow==='cie' && cacheKey){
       STATE.cie.resultsByFocus[cacheKey] = { bodyHTML, timeStamp, truncated: d.stop_reason === 'max_tokens' };
       renderSavedPlanTabs(cacheKey);
+      if(AUTH.email){ saveCurrentPlan(true); }
     }
   }catch(e){
     res.className='out-body';
@@ -1042,19 +1078,167 @@ No paragraph anywhere should exceed 3 sentences. This is a skimmable reference, 
     const sys=`You are the Marigold Inquiry Drafter.\nABSOLUTE RULES:\n1. DIETARY SAFETY \u2014 vendor certification: "${diet}". Kosher: NEVER mention pork, shellfish, or mixing meat/dairy. Halal: NEVER mention pork or alcohol. Zero exceptions.\n2. Maximum 160 words.\n3. Always include a price-lock question.\n4. One specific genuine detail about the vendor. Not flattery \u2014 specificity.\n5. Include event name, date, guest count, need, budget.\n6. Never open with "I hope this email finds you well."\n7. End with: [Review before sending \u2014 personalise the opening and confirm all details]\nAfter draft add:\nCultural details included: (one line)\nTariff note: (if relevant, otherwise omit)`;
     ask(sys, ctx()+'\n\nVENDOR: '+a.name+'\nCATEGORY: '+a.cat+'\nDIETARY: '+diet+'\nEVENT: '+a.event+'\nDATE: '+a.date+'\nGUESTS: '+a.guests+'\nBUDGET: '+a.budget+'\n\nDraft the message.', 'inq-res','inq-out','run-inquiry','Draft my message', null, 'inquiry', 500);
   } else if(flow==='guest'){
-    const sys=`You are the Marigold Guest Communication Agent.\nRULES:\n1. Never take sides between traditions. Represent both equally.\n2. Tone must be exactly: ${a.tone}. Match throughout.\n3. Cultural explanations: welcoming and educational, never make guests feel like outsiders.\n4. Never reference geopolitical tensions or religious conflicts.\n5. Write in the couple's voice \u2014 from ${W.p1} and ${W.p2}, not from a platform.\n6. End with: [Review before sending \u2014 add personal details and confirm all information]\nAfter draft: Cultural context included: (one line)`;
-    ask(sys, ctx()+'\n\nTYPE: '+a.type+'\nAUDIENCE: '+a.aud+'\nTONE: '+a.tone+'\nNOTES: '+(a.notes||'none')+'\n\nDraft the message.', 'gc-res','gc-out','run-guest','Draft message', null, 'guest', 600);
+    const sys=`You are the Marigold Guest Communication Agent.
+RULES:
+1. Never take sides between traditions. Represent both equally.
+2. Tone must be exactly: ${a.tone}. Match throughout.
+3. Cultural explanations: welcoming and educational, never make guests feel like outsiders.
+4. Never reference geopolitical tensions or religious conflicts.
+5. Write in the couple's voice \u2014 from ${W.p1} and ${W.p2}, not from a platform.
+6. If TYPE is a day-of schedule: list EVERY distinct event the couple's traditions and plan call for (e.g. mehndi night, baraat, ceremony, reception, after-party \u2014 whatever actually applies), each with its own date/time and venue/location placeholder if not specified. Do not compress or summarize the schedule into a shorter version \u2014 completeness matters more than brevity for this one message type. Use a clear list or simple table, one line per event.
+7. For all other message types, keep it genuinely brief \u2014 a guest message, not an essay.
+8. End with: [Review before sending \u2014 add personal details and confirm all information]
+After draft: Cultural context included: (one line)`;
+    const guestMaxTokens = (a.type === 'day-of schedule for all events') ? 1400 : 600;
+    ask(sys, ctx()+'\n\nTYPE: '+a.type+'\nAUDIENCE: '+a.aud+'\nTONE: '+a.tone+'\nNOTES: '+(a.notes||'none')+'\n\nDraft the message.', 'gc-res','gc-out','run-guest','Draft message', null, 'guest', guestMaxTokens);
   }
 }
 
-/* ============ INIT ============ */
-/* ============ INTRO SCREEN: choose path ============ */
+/* ============ ACCOUNT: SAVE / LOAD BY EMAIL ============ */
+const AUTH = { email: null, lastSavedAt: null };
+
+function getRememberedEmail(){
+  try { return localStorage.getItem('marigold-email') || null; }
+  catch(e){ return null; }
+}
+function rememberEmail(email){
+  try { localStorage.setItem('marigold-email', email); } catch(e){}
+}
+function forgetEmail(){
+  try { localStorage.removeItem('marigold-email'); } catch(e){}
+  AUTH.email = null;
+}
+
+function snapshotState(){
+  return {
+    W: JSON.parse(JSON.stringify(W)),
+    setupAnswers: JSON.parse(JSON.stringify(STATE.setup.answers)),
+    cieAnswers: JSON.parse(JSON.stringify(STATE.cie.answers)),
+    cieResultsByFocus: JSON.parse(JSON.stringify(STATE.cie.resultsByFocus))
+  };
+}
+
+function restoreFromSnapshot(snap){
+  if(!snap) return false;
+  Object.assign(W, snap.W || {});
+  STATE.setup.answers = snap.setupAnswers || {};
+  STATE.setup.idx = FLOWS.setup.length; // mark setup as already complete
+  STATE.cie.answers = snap.cieAnswers || {};
+  STATE.cie.resultsByFocus = snap.cieResultsByFocus || {};
+  W.shouldAutoGeneratePlan = false; // they're restoring an existing plan, don't auto-fire a fresh generate
+  ['tab-cie','tab-vendor','tab-inquiry','tab-guest'].forEach(id=>{
+    const el = document.getElementById(id);
+    if(el) el.disabled = false;
+  });
+  syncCtx();
+  return true;
+}
+
+async function saveCurrentPlan(showFeedback){
+  if(!AUTH.email) return;
+  if(!W.ready){ return; } // nothing meaningful to save before setup is complete
+  try{
+    const r = await fetch('/api/save-plan', {
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({ email: AUTH.email, data: snapshotState() })
+    });
+    const d = await r.json();
+    if(!r.ok || d.error) throw new Error((d.error&&d.error.message)||('Server responded with '+r.status));
+    AUTH.lastSavedAt = d.savedAt;
+    if(showFeedback) renderAccountBar();
+  }catch(e){
+    console.error('Marigold: save failed', e);
+    if(showFeedback) renderAccountBar('Couldn\u2019t save just now \u2014 '+e.message);
+  }
+}
+
+async function attemptLogin(email, fromRemembered){
+  const statusEl = document.getElementById('login-status');
+  if(statusEl) statusEl.textContent = 'Checking\u2026';
+  try{
+    const r = await fetch('/api/load-plan?email='+encodeURIComponent(email));
+    const d = await r.json();
+    if(!r.ok || d.error) throw new Error((d.error&&d.error.message)||('Server responded with '+r.status));
+    AUTH.email = email;
+    rememberEmail(email);
+    if(d.found){
+      restoreFromSnapshot(d.data);
+      AUTH.lastSavedAt = d.savedAt;
+      renderAccountBar();
+      goTab('cie', 1, document.querySelectorAll('.tab')[1]);
+    } else if(W.ready){
+      // No saved record yet, but they already have in-progress work this session \u2014 save it now rather than losing the chance.
+      await saveCurrentPlan(true);
+      if(statusEl) statusEl.textContent = '';
+      renderIntro();
+    } else {
+      renderAccountBar();
+      if(!fromRemembered && statusEl){
+        statusEl.textContent = 'No saved plan yet for this email \u2014 once you build one, it\u2019ll save here automatically.';
+      } else {
+        renderIntro();
+      }
+    }
+  }catch(e){
+    console.error('Marigold: login/load failed', e);
+    if(statusEl) statusEl.textContent = 'Couldn\u2019t check for a saved plan \u2014 '+e.message;
+  }
+}
+
+function renderAccountBar(errorMsg){
+  const el = document.getElementById('account-bar');
+  if(!el) return;
+  if(!AUTH.email){
+    el.innerHTML = '<button class="account-link" onclick="showLoginForm()">Sign in to save your plan</button>';
+    return;
+  }
+  const savedLabel = AUTH.lastSavedAt
+    ? 'Saved \u00b7 '+new Date(AUTH.lastSavedAt).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'})
+    : 'Signed in';
+  el.innerHTML = '<span class="account-email">'+AUTH.email+'</span>'+
+    '<span class="account-saved">'+savedLabel+'</span>'+
+    '<button class="account-link" onclick="forgetEmail();renderAccountBar();">sign out</button>'+
+    (errorMsg ? '<span class="account-error">'+errorMsg+'</span>' : '');
+}
+
+function showLoginForm(){
+  const card = document.getElementById('qc-intro');
+  goTab('intro', 0, document.querySelectorAll('.tab')[0]);
+  card.innerHTML =
+    '<div class="ql">Sign in</div>'+
+    '<div class="qt">What\u2019s your email?</div>'+
+    '<div class="qs">We\u2019ll save your plan here, so it\u2019s waiting for you next time \u2014 on any device.</div>'+
+    '<input class="fi" id="login-email" type="email" placeholder="you@example.com" style="margin-bottom:14px">'+
+    '<div id="login-status" style="font-size:12px;color:var(--muted);font-style:italic;margin-bottom:14px"></div>'+
+    '<div class="qnav">'+
+      '<button class="cta" onclick="submitLoginForm()">Continue <span class="arr">\u2192</span></button>'+
+      '<button class="back-link" onclick="renderIntro()">back</button>'+
+    '</div>';
+  document.getElementById('login-email').focus();
+}
+
+function submitLoginForm(){
+  const input = document.getElementById('login-email');
+  const email = (input.value||'').trim().toLowerCase();
+  if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)){
+    document.getElementById('login-status').textContent = 'That doesn\u2019t look like a valid email \u2014 try again.';
+    return;
+  }
+  attemptLogin(email, false);
+}
+
 function renderIntro(){
   const card = document.getElementById('qc-intro');
+  const signInNote = AUTH.email
+    ? ''
+    : '<div class="free-hint" style="margin-bottom:24px">\ud83d\udca1 Your plan isn\u2019t saved automatically. <button class="account-link" onclick="showLoginForm()" style="font-size:inherit">Sign in with your email</button> first if you\u2019d like to pick up where you left off later, on any device.</div>';
   card.innerHTML =
     '<div class="ql">Welcome</div>'+
     '<div class="qt">Tell us about the wedding you\u2019re envisioning.</div>'+
     '<div class="qs">Share as much or as little as you like \u2014 we\u2019ll fill in the rest together.</div>'+
+    '<div class="why-line">Marigold isn\u2019t a planner, and it won\u2019t replace one if your wedding needs one. It\u2019s the layer in between \u2014 the part that knows a vegetarian Hindu menu needs its own prep line, a kosher caterer can\u2019t share a kitchen with a non-kosher one, and which vendor to book first for a multi-day celebration \u2014 before you\u2019re already paying someone to find out.</div>'+
+    signInNote+
     '<div class="choice-cards">'+
       '<button class="choice-card" onclick="chooseFreeText()">'+
         '<div class="cc-title">I\u2019ll describe it</div>'+
@@ -1269,7 +1453,12 @@ function applyExtracted(parsed, originalText){
 }
 
 /* ============ INIT ============ */
+renderAccountBar();
 renderIntro();
+const rememberedEmail = getRememberedEmail();
+if(rememberedEmail){
+  attemptLogin(rememberedEmail, true);
+}
 </script>
 </body>
 </html>
