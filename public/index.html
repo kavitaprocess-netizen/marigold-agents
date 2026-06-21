@@ -1029,8 +1029,9 @@ RULES:
 
 FORMAT \u2014 write this primarily in short paragraphs, not lists of one-line fragments. Cover as many genuinely important, specific points as this couple's traditions and complexity call for \u2014 don't compress real detail down just to look shorter. For each section below, choose whichever format actually fits that content best:
 - Most sections (overview, ceremony sequence, vendor priorities, decisions to align on) read best as a few short paragraphs, written in full sentences, that walk through the real points in a natural order. Use a bullet only where a section is genuinely a list of discrete, parallel items with nothing more to say about each one.
-- Budget framework should be a real markdown table (it's naturally tabular data) \u2014 cover every category that's actually relevant to this couple's traditions and size, not just the most common ones.
-- Checklist should be a flat bulleted list of concrete, actionable items (one line each) \u2014 this section specifically benefits from being scannable and checkable, unlike the others.
+- For each of those paragraph-based sections, open with a single bolded one-line summary before the paragraphs \u2014 format it as **In short:** followed by the 2-3 most important takeaways from that section, separated by semicolons, on one line. This gives someone a scannable gist before the full detail. Do not repeat this summary line again at the end of the section.
+- Budget framework should be a real markdown table (it's naturally tabular data) \u2014 cover every category that's actually relevant to this couple's traditions and size, not just the most common ones. No summary line needed here \u2014 the table itself is already scannable.
+- Checklist should be a flat bulleted list of concrete, actionable items (one line each) \u2014 this section specifically benefits from being scannable and checkable, unlike the others. No summary line needed here either.
 - If a section would genuinely be clearer as a short reference table or list of options (e.g. comparing two ceremony formats, or a quick vendor reference), use that format for that section only \u2014 don't force every section into the same shape.
 
 SECTIONS \u2014 include what's relevant, in this order:
@@ -1041,7 +1042,7 @@ SECTIONS \u2014 include what's relevant, in this order:
 ## Decisions to align on (only if something genuinely applies, per rule 6 \u2014 omit entirely otherwise)
 ## Checklist (bulleted list)
 
-If FOCUS below asks for only one of these sections, output only that section in full \u2014 do not include the others at all. Use **bold** sparingly for key numbers, dates, or terms \u2014 never whole sentences.
+If FOCUS below asks for only one of these sections, output only that section in full \u2014 do not include the others at all. Use **bold** sparingly for key numbers, dates, or terms, and for the "In short:" summary line \u2014 never whole sentences beyond that.
 
 Tone: warm and genuinely useful. Thorough on substance, not padded with filler.`;
     ask(sys, ctx()+'\n\nFOCUS: '+a.focus+'\n\nGenerate the wedding plan.', 'cie-res','cie-out','run-cie','Generate my plan', {checklistMode:true, idPrefix:'cie'}, 'cie', 6000, null, focusKey);
@@ -1067,10 +1068,10 @@ RULES:
 6. Currency calibration: if the wedding location is a destination outside the US, all pricing in "Budget reality check" must reflect REALISTIC LOCAL market costs, not US pricing scaled down. For Destination \u2014 India specifically: quote in INR with an approximate USD equivalent in parentheses, using realistic Indian vendor rates for this category and the couple's stated tier \u2014 do not assume US dollar bucket ranges translate directly.
 
 FORMAT \u2014 write primarily in short paragraphs, not one-line bullet fragments. Cover as many genuinely useful, specific points as the category warrants. Choose the format that fits each section:
-- "What to look for" and "Where to find more" read best as a couple of short paragraphs in full sentences.
-- "Vendors to consider" works well as a short list since each entry is a discrete, parallel item \u2014 name plus a real sentence of context, not just one line.
-- "Questions to ask" is naturally a list \u2014 keep it as bullets.
-- "Budget reality check" is a short paragraph with concrete numbers, currency calibrated per rule 6 above.
+- "What to look for" and "Where to find more" read best as a couple of short paragraphs in full sentences. Open each with a single bolded one-line summary first \u2014 format as **In short:** followed by the 2-3 most important takeaways, separated by semicolons \u2014 then the paragraph detail below it.
+- "Vendors to consider" works well as a short list since each entry is a discrete, parallel item \u2014 name plus a real sentence of context, not just one line. No summary line needed, the list itself is already scannable.
+- "Questions to ask" is naturally a list \u2014 keep it as bullets. No summary line needed.
+- "Budget reality check" is a short paragraph with concrete numbers, currency calibrated per rule 6 above. Open it with **In short:** plus the key number(s), same format as above.
 
 ## What to look for
 ## Vendors to consider
