@@ -520,7 +520,6 @@ function renderQuestion(flow){
         } else {
           wrap.querySelectorAll('.p').forEach(x=>x.classList.remove('on'));
           b.classList.add('on');
-          setTimeout(()=>advance(flow), 280); // brief pause so the selection is visible before advancing
         }
       });
     });
@@ -755,8 +754,7 @@ function renderMD(src, opts){
     if(inList){
       const wasChecklist = inChecklist;
       if(inList === 'ul'){
-        const useCols = !wasChecklist && listItems.length >= 5;
-        html += '<ul'+(wasChecklist?' class="checklist"':(useCols?' class="cols"':''))+'>'+listItems.join('')+'</ul>';
+        html += '<ul'+(wasChecklist?' class="checklist"':'')+'>'+listItems.join('')+'</ul>';
       } else {
         html += '<ol>'+listItems.join('')+'</ol>';
       }
@@ -1029,19 +1027,23 @@ RULES:
 7. Currency and cost calibration: if the wedding location is a "Destination" outside the US, all costs, budget tables, and vendor price ranges must reflect REALISTIC LOCAL costs for that country, not US pricing scaled down. For Destination \u2014 India specifically: quote in INR (with an approximate USD equivalent in parentheses), and use realistic Indian wedding market rates \u2014 a wedding that would cost $75,000 in the US could be a significantly different budget in India for comparable quality, depending on city tier and vendor caliber. Do not assume US dollar bucket ranges translate directly.
 8. Close with: "Confirm all ceremony details with your officiant and families before booking."
 
-STRUCTURE \u2014 follow this exactly. These are upper limits to prevent rambling, not targets to hit regardless of relevance \u2014 use as much of the cap as the couple's actual complexity warrants (e.g. an interfaith destination wedding genuinely needs more budget rows and vendor priorities than a small single-tradition local one), but never pad with filler just to fill space:
-## Overview (max 4 sentences total, no bullets needed here)
-## Budget framework (a markdown table, max 12 rows of line items \u2014 cover every category that's actually relevant to this couple's traditions and size, not just the most common ones. One sentence max before the table. Currency calibrated per rule 7 above.)
-## Ceremony sequence (bulleted list, max 10 bullets, one line each \u2014 include every distinct ceremony or event the couple's traditions call for, don't compress multiple events into one bullet)
-## Vendor priorities (bulleted list, max 10 bullets, one line each \u2014 which vendors to book first and why, in priority order \u2014 include every vendor category genuinely needed for this couple's traditions and size)
-## Decisions to align on (only if something genuinely applies, per rule 6 \u2014 bulleted list, max 6 bullets, one line each)
-## Checklist (bulleted list, max 12 items, one line each, concrete and actionable \u2014 cover the full scope of what needs doing, not just a sample)
+FORMAT \u2014 write this primarily in short paragraphs, not lists of one-line fragments. Cover as many genuinely important, specific points as this couple's traditions and complexity call for \u2014 don't compress real detail down just to look shorter. For each section below, choose whichever format actually fits that content best:
+- Most sections (overview, ceremony sequence, vendor priorities, decisions to align on) read best as a few short paragraphs, written in full sentences, that walk through the real points in a natural order. Use a bullet only where a section is genuinely a list of discrete, parallel items with nothing more to say about each one.
+- Budget framework should be a real markdown table (it's naturally tabular data) \u2014 cover every category that's actually relevant to this couple's traditions and size, not just the most common ones.
+- Checklist should be a flat bulleted list of concrete, actionable items (one line each) \u2014 this section specifically benefits from being scannable and checkable, unlike the others.
+- If a section would genuinely be clearer as a short reference table or list of options (e.g. comparing two ceremony formats, or a quick vendor reference), use that format for that section only \u2014 don't force every section into the same shape.
 
-Every table row (header, separator, every data row) is exactly one line, no blank lines between rows, short cell contents. Use **bold** only for key numbers or terms, never whole sentences. If FOCUS below asks for only one of these sections, output only that section in full \u2014 do not include the others at all.
+SECTIONS \u2014 include what's relevant, in this order:
+## Overview
+## Budget framework (markdown table, currency calibrated per rule 7 above)
+## Ceremony sequence
+## Vendor priorities
+## Decisions to align on (only if something genuinely applies, per rule 6 \u2014 omit entirely otherwise)
+## Checklist (bulleted list)
 
-Each bullet or row should be a genuinely distinct point, not a restatement. Prioritize completeness over brevity within each cap \u2014 it's better to use 9 of 10 ceremony bullets covering real events than to compress them down to 4 for the sake of looking shorter.
+If FOCUS below asks for only one of these sections, output only that section in full \u2014 do not include the others at all. Use **bold** sparingly for key numbers, dates, or terms \u2014 never whole sentences.
 
-Tone: warm but brief. Specific and useful over eloquent.`;
+Tone: warm and genuinely useful. Thorough on substance, not padded with filler.`;
     ask(sys, ctx()+'\n\nFOCUS: '+a.focus+'\n\nGenerate the wedding plan.', 'cie-res','cie-out','run-cie','Generate my plan', {checklistMode:true, idPrefix:'cie'}, 'cie', 6000, null, focusKey);
   } else if(flow==='vendor'){
     if(a.source === 'bring my own'){
@@ -1064,14 +1066,19 @@ RULES:
 5. Flag tariff risks for imported florals, specialty ingredients, textiles.
 6. Currency calibration: if the wedding location is a destination outside the US, all pricing in "Budget reality check" must reflect REALISTIC LOCAL market costs, not US pricing scaled down. For Destination \u2014 India specifically: quote in INR with an approximate USD equivalent in parentheses, using realistic Indian vendor rates for this category and the couple's stated tier \u2014 do not assume US dollar bucket ranges translate directly.
 
-STRUCTURE \u2014 follow exactly. These are upper limits to prevent rambling, not targets \u2014 use what the request actually warrants:
-## What to look for (bulleted list, max 6 bullets, one line each \u2014 not a paragraph)
-## Vendors to consider (bulleted list, max 6 vendors. Each bullet: **Name** \u2014 one line reason, nothing more. No sub-bullets, no extra detail per vendor.)
-## Where to find more (max 3 sentences)
-## Questions to ask (bulleted list, max 6 bullets, one line each)
-## Budget reality check (max 3 sentences, mention concrete numbers, currency calibrated per rule 6 above)
+FORMAT \u2014 write primarily in short paragraphs, not one-line bullet fragments. Cover as many genuinely useful, specific points as the category warrants. Choose the format that fits each section:
+- "What to look for" and "Where to find more" read best as a couple of short paragraphs in full sentences.
+- "Vendors to consider" works well as a short list since each entry is a discrete, parallel item \u2014 name plus a real sentence of context, not just one line.
+- "Questions to ask" is naturally a list \u2014 keep it as bullets.
+- "Budget reality check" is a short paragraph with concrete numbers, currency calibrated per rule 6 above.
 
-No paragraph anywhere should exceed 3 sentences. This is a skimmable reference, not an essay \u2014 prioritize covering real, useful options over staying short.`;
+## What to look for
+## Vendors to consider
+## Where to find more
+## Questions to ask
+## Budget reality check
+
+Use **bold** sparingly for vendor names or key numbers only. This should be genuinely useful and specific, not padded \u2014 thoroughness matters more than brevity.`;
     ask(sys, ctx()+'\n\nVENDOR: '+a.cat+'\nBUDGET: '+a.bud+'\nEVENT DATE: '+a.date, 'vm-res','vm-out','run-vendor','Find vendors', null, 'vendor', 1800);
   } else if(flow==='inquiry'){
     const diet = a.diet;
