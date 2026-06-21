@@ -629,6 +629,21 @@ function finalizeSetup(){
   if(AUTH.email){ saveCurrentPlan(true); }
 }
 
+function goToPlanFromSummary(){
+  const keys = Object.keys(STATE.cie.resultsByFocus);
+  if(keys.length === 0){
+    // Nothing generated yet \u2014 land on the plan tab's normal question/generate screen,
+    // which already makes clear there's nothing to show and what to do next.
+    goTab('cie', 1, document.querySelectorAll('.tab')[1]);
+    return;
+  }
+  // Jump straight to the most recently generated result rather than the question flow.
+  STATE.cie.idx = FLOWS.cie.length;
+  goTab('cie', 1, document.querySelectorAll('.tab')[1]);
+  const mostRecentKey = keys[keys.length-1];
+  showCachedPlanResult(mostRecentKey);
+}
+
 function renderSetupSummary(){
   const card = document.getElementById('qc-setup');
   const qs = FLOWS.setup;
@@ -644,7 +659,7 @@ function renderSetupSummary(){
     '<div class="qt" style="margin-bottom:18px">'+W.p1+' & '+W.p2+'\u2019s details</div>'+
     '<div class="detail-summary">'+rows+'</div>'+
     '<div class="qnav" style="margin-top:20px">'+
-      '<button class="cta" onclick="goTab(\'cie\',1,document.querySelectorAll(\'.tab\')[1])">See your plan <span class="arr">\u2192</span></button>'+
+      '<button class="cta" onclick="goToPlanFromSummary()">See your plan <span class="arr">\u2192</span></button>'+
       '<button class="back-link" onclick="editSetupDetails()">edit these details</button>'+
     '</div>';
 }
@@ -1302,6 +1317,21 @@ function confirmDeleteSavedPlan(){
   deleteSavedPlan();
 }
 
+function resetAllSessionState(){
+  // Wipe everything currently held in memory \u2014 used after deleting a saved plan,
+  // so the live session matches what's actually left on the server (nothing).
+  Object.assign(W, {p1:'',p2:'',tr:[],hinduRegion:'',sz:'',loc:'',bud:'',dt:'',obs:'',ready:false,shouldAutoGeneratePlan:false});
+  STATE.setup = {idx:0, answers:{}};
+  STATE.cie = {idx:0, answers:{}, resultsByFocus:{}};
+  STATE.vendor = {idx:0, answers:{}};
+  STATE.inquiry = {idx:0, answers:{}};
+  STATE.guest = {idx:0, answers:{}};
+  ['tab-cie','tab-vendor','tab-inquiry','tab-guest'].forEach(id=>{
+    const el = document.getElementById(id);
+    if(el) el.disabled = true;
+  });
+}
+
 async function deleteSavedPlan(){
   const statusEl = document.getElementById('delete-status');
   if(statusEl) statusEl.textContent = 'Deleting\u2026';
@@ -1315,9 +1345,10 @@ async function deleteSavedPlan(){
     if(!r.ok || d.error) throw new Error((d.error&&d.error.message)||('Server responded with '+r.status));
     AUTH.pendingSnapshot = null;
     AUTH.lastSavedAt = null;
+    resetAllSessionState();
     renderAccountBar();
     if(statusEl) statusEl.textContent = '';
-    renderIntro();
+    renderIntro({justDeleted: true});
   }catch(e){
     console.error('Marigold: delete failed', e);
     if(statusEl) statusEl.textContent = 'Couldn\u2019t delete \u2014 '+e.message;
@@ -1384,15 +1415,20 @@ function submitLoginForm(){
   attemptLogin(email, false);
 }
 
-function renderIntro(){
+function renderIntro(opts){
+  opts = opts || {};
   const card = document.getElementById('qc-intro');
   const signInNote = AUTH.email
     ? ''
     : '<div class="free-hint" style="margin-bottom:24px">\ud83d\udca1 Your plan isn\u2019t saved automatically. <button class="account-link" onclick="showLoginForm()" style="font-size:inherit">Sign in with your email</button> first if you\u2019d like to pick up where you left off later, on any device.</div>';
+  const deletedNote = opts.justDeleted
+    ? '<div class="free-hint" style="margin-bottom:24px;color:#a04a1a">Your saved plan has been deleted.</div>'
+    : '';
   card.innerHTML =
     '<div class="ql">Welcome</div>'+
     '<div class="qt">Tell us about the wedding you\u2019re envisioning.</div>'+
     '<div class="qs">Share as much or as little as you like \u2014 we\u2019ll fill in the rest together.</div>'+
+    deletedNote+
     '<div class="why-line">Most wedding tools assume one tradition, one family, one set of rules. Yours probably isn\u2019t that simple \u2014 and the mistakes that come from guessing are expensive: a vegetarian Hindu menu needs its own prep line, a kosher caterer can\u2019t share a kitchen with a non-kosher one, and the wrong vendor booked first can throw a multi-day celebration out of order. Marigold catches that before you\u2019ve signed a contract to find out the hard way \u2014 so whether or not you hire a planner, you walk in already knowing what to ask.</div>'+
     signInNote+
     '<div class="choice-cards">'+
