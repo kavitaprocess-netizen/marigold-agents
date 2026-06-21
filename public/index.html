@@ -1027,12 +1027,12 @@ RULES:
 7. Currency and cost calibration: if the wedding location is a "Destination" outside the US, all costs, budget tables, and vendor price ranges must reflect REALISTIC LOCAL costs for that country, not US pricing scaled down. For Destination \u2014 India specifically: quote in INR (with an approximate USD equivalent in parentheses), and use realistic Indian wedding market rates \u2014 a wedding that would cost $75,000 in the US could be a significantly different budget in India for comparable quality, depending on city tier and vendor caliber. Do not assume US dollar bucket ranges translate directly.
 8. Close with: "Confirm all ceremony details with your officiant and families before booking."
 
-FORMAT \u2014 write this primarily in short paragraphs, not lists of one-line fragments. Cover as many genuinely important, specific points as this couple's traditions and complexity call for \u2014 don't compress real detail down just to look shorter. For each section below, choose whichever format actually fits that content best:
-- Most sections (overview, ceremony sequence, vendor priorities, decisions to align on) read best as a few short paragraphs, written in full sentences, that walk through the real points in a natural order. Use a bullet only where a section is genuinely a list of discrete, parallel items with nothing more to say about each one.
-- For each of those paragraph-based sections, open with a single bolded one-line summary before the paragraphs \u2014 format it as **In short:** followed by the 2-3 most important takeaways from that section, separated by semicolons, on one line. This gives someone a scannable gist before the full detail. Do not repeat this summary line again at the end of the section.
-- Budget framework should be a real markdown table (it's naturally tabular data) \u2014 cover every category that's actually relevant to this couple's traditions and size, not just the most common ones. No summary line needed here \u2014 the table itself is already scannable.
-- Checklist should be a flat bulleted list of concrete, actionable items (one line each) \u2014 this section specifically benefits from being scannable and checkable, unlike the others. No summary line needed here either.
-- If a section would genuinely be clearer as a short reference table or list of options (e.g. comparing two ceremony formats, or a quick vendor reference), use that format for that section only \u2014 don't force every section into the same shape.
+FORMAT \u2014 write this to be read in under two minutes, not as a long document. Cover the genuinely important points for this couple's traditions and complexity, but say each one efficiently \u2014 completeness means hitting the real points, not writing more words about each one.
+- Most sections (overview, ceremony sequence, vendor priorities, decisions to align on) are 2-4 short paragraphs, 2-3 sentences each, in plain everyday language. No paragraph should run longer than 3 sentences. Use a bullet only where a section is genuinely a list of discrete, parallel items with nothing more to say about each one.
+- Every paragraph-based section MUST start with one bolded summary line in this exact format: **In short:** followed by 2-3 short takeaways separated by semicolons, all on one line, before any paragraph text. This is required, not optional \u2014 never skip it.
+- Budget framework is a real markdown table (it's naturally tabular data) \u2014 cover the categories genuinely relevant to this couple's traditions and size. No summary line needed, the table is already scannable.
+- Checklist is a flat bulleted list of concrete, actionable items, one short line each. No summary line needed.
+- If a section would genuinely be clearer as a short reference table or list, use that format instead \u2014 don't force every section into paragraphs.
 
 SECTIONS \u2014 include what's relevant, in this order:
 ## Overview
@@ -1042,10 +1042,10 @@ SECTIONS \u2014 include what's relevant, in this order:
 ## Decisions to align on (only if something genuinely applies, per rule 6 \u2014 omit entirely otherwise)
 ## Checklist (bulleted list)
 
-If FOCUS below asks for only one of these sections, output only that section in full \u2014 do not include the others at all. Use **bold** sparingly for key numbers, dates, or terms, and for the "In short:" summary line \u2014 never whole sentences beyond that.
+If FOCUS below asks for only one of these sections, output only that section in full \u2014 do not include the others at all. Use **bold** only for the "In short:" line and for key numbers/dates \u2014 never whole sentences.
 
-Tone: warm and genuinely useful. Thorough on substance, not padded with filler.`;
-    ask(sys, ctx()+'\n\nFOCUS: '+a.focus+'\n\nGenerate the wedding plan.', 'cie-res','cie-out','run-cie','Generate my plan', {checklistMode:true, idPrefix:'cie'}, 'cie', 6000, null, focusKey);
+Tone: warm, plain, and direct. Say the important thing in the fewest clear words, not the most thorough-sounding ones.`;
+    ask(sys, ctx()+'\n\nFOCUS: '+a.focus+'\n\nGenerate the wedding plan.', 'cie-res','cie-out','run-cie','Generate my plan', {checklistMode:true, idPrefix:'cie'}, 'cie', 3500, null, focusKey);
   } else if(flow==='vendor'){
     if(a.source === 'bring my own'){
       runByoInvite(a);
@@ -1067,11 +1067,11 @@ RULES:
 5. Flag tariff risks for imported florals, specialty ingredients, textiles.
 6. Currency calibration: if the wedding location is a destination outside the US, all pricing in "Budget reality check" must reflect REALISTIC LOCAL market costs, not US pricing scaled down. For Destination \u2014 India specifically: quote in INR with an approximate USD equivalent in parentheses, using realistic Indian vendor rates for this category and the couple's stated tier \u2014 do not assume US dollar bucket ranges translate directly.
 
-FORMAT \u2014 write primarily in short paragraphs, not one-line bullet fragments. Cover as many genuinely useful, specific points as the category warrants. Choose the format that fits each section:
-- "What to look for" and "Where to find more" read best as a couple of short paragraphs in full sentences. Open each with a single bolded one-line summary first \u2014 format as **In short:** followed by the 2-3 most important takeaways, separated by semicolons \u2014 then the paragraph detail below it.
-- "Vendors to consider" works well as a short list since each entry is a discrete, parallel item \u2014 name plus a real sentence of context, not just one line. No summary line needed, the list itself is already scannable.
-- "Questions to ask" is naturally a list \u2014 keep it as bullets. No summary line needed.
-- "Budget reality check" is a short paragraph with concrete numbers, currency calibrated per rule 6 above. Open it with **In short:** plus the key number(s), same format as above.
+FORMAT \u2014 write this to be read in under a minute, not a long document. Short paragraphs (2-3 sentences max), plain language, say each point efficiently.
+- "What to look for" and "Where to find more" are 1-2 short paragraphs, 2-3 sentences each. Each MUST start with a required summary line: **In short:** followed by 2-3 short takeaways separated by semicolons, then the paragraph below it.
+- "Vendors to consider" is a short list \u2014 each entry: name plus one real sentence of context. No summary line needed.
+- "Questions to ask" is a bulleted list. No summary line needed.
+- "Budget reality check" is one short paragraph with concrete numbers, currency calibrated per rule 6 above, opening with **In short:** plus the key number(s).
 
 ## What to look for
 ## Vendors to consider
@@ -1079,8 +1079,8 @@ FORMAT \u2014 write primarily in short paragraphs, not one-line bullet fragments
 ## Questions to ask
 ## Budget reality check
 
-Use **bold** sparingly for vendor names or key numbers only. This should be genuinely useful and specific, not padded \u2014 thoroughness matters more than brevity.`;
-    ask(sys, ctx()+'\n\nVENDOR: '+a.cat+'\nBUDGET: '+a.bud+'\nEVENT DATE: '+a.date, 'vm-res','vm-out','run-vendor','Find vendors', null, 'vendor', 1800);
+Use **bold** only for the "In short:" line, vendor names, or key numbers. Say the useful thing in the fewest clear words.`;
+    ask(sys, ctx()+'\n\nVENDOR: '+a.cat+'\nBUDGET: '+a.bud+'\nEVENT DATE: '+a.date, 'vm-res','vm-out','run-vendor','Find vendors', null, 'vendor', 1200);
   } else if(flow==='inquiry'){
     const diet = a.diet;
     const sys=`You are the Marigold Inquiry Drafter.\nABSOLUTE RULES:\n1. DIETARY SAFETY \u2014 vendor certification: "${diet}". Kosher: NEVER mention pork, shellfish, or mixing meat/dairy. Halal: NEVER mention pork or alcohol. Zero exceptions.\n2. Maximum 160 words.\n3. Always include a price-lock question.\n4. One specific genuine detail about the vendor. Not flattery \u2014 specificity.\n5. Include event name, date, guest count, need, budget.\n6. Never open with "I hope this email finds you well."\n7. End with: [Review before sending \u2014 personalise the opening and confirm all details]\nAfter draft add:\nCultural details included: (one line)\nTariff note: (if relevant, otherwise omit)`;
