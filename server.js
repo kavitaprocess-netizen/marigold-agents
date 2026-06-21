@@ -63,6 +63,22 @@ app.get('/api/load-plan', async (req, res) => {
   }
 });
 
+app.post('/api/delete-plan', async (req, res) => {
+  if (!kv) {
+    return res.status(500).json({ error: { message: 'Storage is not configured yet. Enable Vercel KV and set its environment variables, then redeploy.' } });
+  }
+  const email = normalizeEmail(req.body.email);
+  if (!email) {
+    return res.status(400).json({ error: { message: 'A valid email is required to delete.' } });
+  }
+  try {
+    await kv.del('marigold:plan:' + email);
+    res.json({ ok: true });
+  } catch (e) {
+    res.status(500).json({ error: { message: 'Could not delete: ' + e.message } });
+  }
+});
+
 app.post('/api/chat', (req, res) => {
   const key = process.env.ANTHROPIC_API_KEY;
   if (!key) {

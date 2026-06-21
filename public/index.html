@@ -112,6 +112,14 @@ textarea.fi{border:1px solid var(--bdr);border-radius:8px;padding:12px 14px;resi
 .out-body ul,.out-body ol{margin:0 0 16px;padding-left:22px}
 .out-body li{margin-bottom:6px}
 .out-body hr{border:none;border-top:1px solid var(--bdr);margin:24px 0}
+
+.in-short{background:var(--warm);border:1px solid var(--bdr);border-left:3px solid var(--gd);border-radius:0 8px 8px 0;padding:12px 16px;margin:0 0 16px;font-size:13px}
+.in-short-label{display:block;font-family:'Playfair Display',Georgia,serif;font-style:italic;font-size:11px;letter-spacing:1px;color:var(--gk);text-transform:uppercase;margin-bottom:6px}
+.in-short-body{color:var(--tx);line-height:1.6}
+.in-short ul{margin:0;padding-left:18px}
+.in-short li{margin-bottom:4px;color:var(--tx);line-height:1.5}
+.in-short li:last-child{margin-bottom:0}
+
 .out-table-wrap{overflow-x:auto;margin:0 0 20px;border:1px solid var(--bdr);border-radius:8px}
 .out-body table{width:100%;border-collapse:collapse;font-size:13px}
 .out-body th{background:var(--warm);color:var(--deep);font-weight:700;text-align:left;padding:9px 12px;border-bottom:1px solid var(--bdr);white-space:nowrap}
@@ -829,6 +837,16 @@ function renderMD(src, opts){
 
     if(/^\s*$/.test(line)){ closeList(); i++; continue; }
 
+    if((m = /^\s*\*\*In short:?\*\*\s*(.*)$/i.exec(line))){
+      closeList();
+      const points = m[1].split(/;\s*/).map(p=>p.trim().replace(/\.$/,'')).filter(Boolean);
+      const pointsHTML = points.length > 1
+        ? '<ul>'+points.map(p=>'<li>'+inline(p)+'</li>').join('')+'</ul>'
+        : '<span class="in-short-body">'+inline(m[1])+'</span>';
+      html += '<div class="in-short"><span class="in-short-label">In short</span>'+pointsHTML+'</div>';
+      i++; continue;
+    }
+
     closeList();
     let para = [line];
     i++;
@@ -1027,12 +1045,11 @@ RULES:
 7. Currency and cost calibration: if the wedding location is a "Destination" outside the US, all costs, budget tables, and vendor price ranges must reflect REALISTIC LOCAL costs for that country, not US pricing scaled down. For Destination \u2014 India specifically: quote in INR (with an approximate USD equivalent in parentheses), and use realistic Indian wedding market rates \u2014 a wedding that would cost $75,000 in the US could be a significantly different budget in India for comparable quality, depending on city tier and vendor caliber. Do not assume US dollar bucket ranges translate directly.
 8. Close with: "Confirm all ceremony details with your officiant and families before booking."
 
-FORMAT \u2014 write this to be read in under two minutes, not as a long document. Cover the genuinely important points for this couple's traditions and complexity, but say each one efficiently \u2014 completeness means hitting the real points, not writing more words about each one.
-- Most sections (overview, ceremony sequence, vendor priorities, decisions to align on) are 2-4 short paragraphs, 2-3 sentences each, in plain everyday language. No paragraph should run longer than 3 sentences. Use a bullet only where a section is genuinely a list of discrete, parallel items with nothing more to say about each one.
-- Every paragraph-based section MUST start with one bolded summary line in this exact format: **In short:** followed by 2-3 short takeaways separated by semicolons, all on one line, before any paragraph text. This is required, not optional \u2014 never skip it.
-- Budget framework is a real markdown table (it's naturally tabular data) \u2014 cover the categories genuinely relevant to this couple's traditions and size. No summary line needed, the table is already scannable.
-- Checklist is a flat bulleted list of concrete, actionable items, one short line each. No summary line needed.
-- If a section would genuinely be clearer as a short reference table or list, use that format instead \u2014 don't force every section into paragraphs.
+FORMAT \u2014 hard limits, not suggestions. This must be genuinely short and fast to read:
+- Every paragraph-based section (overview, ceremony sequence, vendor priorities, decisions to align on) gets EXACTLY ONE summary line plus EXACTLY 2 short paragraphs of 2 sentences each. Never more. If you have more to say, cut it \u2014 do not add a third paragraph.
+- The summary line is the first line of the section, formatted exactly as: **In short:** then 2-3 short takeaways separated by semicolons, all on one line. Put it on its own line, immediately after the ## heading, before any paragraph.
+- Budget framework: a markdown table, max 8 rows.
+- Checklist: a flat bulleted list, max 8 items, one short line each.
 
 SECTIONS \u2014 include what's relevant, in this order:
 ## Overview
@@ -1042,10 +1059,10 @@ SECTIONS \u2014 include what's relevant, in this order:
 ## Decisions to align on (only if something genuinely applies, per rule 6 \u2014 omit entirely otherwise)
 ## Checklist (bulleted list)
 
-If FOCUS below asks for only one of these sections, output only that section in full \u2014 do not include the others at all. Use **bold** only for the "In short:" line and for key numbers/dates \u2014 never whole sentences.
+If FOCUS below asks for only one of these sections, output only that section in full \u2014 do not include the others at all. Use **bold** only for the "In short:" line and key numbers/dates.
 
-Tone: warm, plain, and direct. Say the important thing in the fewest clear words, not the most thorough-sounding ones.`;
-    ask(sys, ctx()+'\n\nFOCUS: '+a.focus+'\n\nGenerate the wedding plan.', 'cie-res','cie-out','run-cie','Generate my plan', {checklistMode:true, idPrefix:'cie'}, 'cie', 3500, null, focusKey);
+Tone: plain and direct. If you're unsure whether to include something, leave it out \u2014 the limits above are hard caps, not targets to fill.`;
+    ask(sys, ctx()+'\n\nFOCUS: '+a.focus+'\n\nGenerate the wedding plan.', 'cie-res','cie-out','run-cie','Generate my plan', {checklistMode:true, idPrefix:'cie'}, 'cie', 2200, null, focusKey);
   } else if(flow==='vendor'){
     if(a.source === 'bring my own'){
       runByoInvite(a);
@@ -1067,11 +1084,12 @@ RULES:
 5. Flag tariff risks for imported florals, specialty ingredients, textiles.
 6. Currency calibration: if the wedding location is a destination outside the US, all pricing in "Budget reality check" must reflect REALISTIC LOCAL market costs, not US pricing scaled down. For Destination \u2014 India specifically: quote in INR with an approximate USD equivalent in parentheses, using realistic Indian vendor rates for this category and the couple's stated tier \u2014 do not assume US dollar bucket ranges translate directly.
 
-FORMAT \u2014 write this to be read in under a minute, not a long document. Short paragraphs (2-3 sentences max), plain language, say each point efficiently.
-- "What to look for" and "Where to find more" are 1-2 short paragraphs, 2-3 sentences each. Each MUST start with a required summary line: **In short:** followed by 2-3 short takeaways separated by semicolons, then the paragraph below it.
-- "Vendors to consider" is a short list \u2014 each entry: name plus one real sentence of context. No summary line needed.
-- "Questions to ask" is a bulleted list. No summary line needed.
-- "Budget reality check" is one short paragraph with concrete numbers, currency calibrated per rule 6 above, opening with **In short:** plus the key number(s).
+FORMAT \u2014 hard limits, not suggestions:
+- "What to look for" and "Where to find more": EXACTLY ONE summary line plus EXACTLY 1 short paragraph of 2 sentences. Never more.
+- The summary line goes first, right after the ## heading, formatted exactly as: **In short:** then 2-3 short takeaways separated by semicolons, on one line.
+- "Vendors to consider": a short list, max 4 entries, each just a name plus one short sentence.
+- "Questions to ask": a bulleted list, max 4 items.
+- "Budget reality check": EXACTLY ONE summary line (**In short:** plus the key number) plus EXACTLY 1 short sentence after it. Nothing more.
 
 ## What to look for
 ## Vendors to consider
@@ -1079,8 +1097,8 @@ FORMAT \u2014 write this to be read in under a minute, not a long document. Shor
 ## Questions to ask
 ## Budget reality check
 
-Use **bold** only for the "In short:" line, vendor names, or key numbers. Say the useful thing in the fewest clear words.`;
-    ask(sys, ctx()+'\n\nVENDOR: '+a.cat+'\nBUDGET: '+a.bud+'\nEVENT DATE: '+a.date, 'vm-res','vm-out','run-vendor','Find vendors', null, 'vendor', 1200);
+Use **bold** only for the "In short:" line, vendor names, or key numbers. If unsure whether to include something, leave it out.`;
+    ask(sys, ctx()+'\n\nVENDOR: '+a.cat+'\nBUDGET: '+a.bud+'\nEVENT DATE: '+a.date, 'vm-res','vm-out','run-vendor','Find vendors', null, 'vendor', 900);
   } else if(flow==='inquiry'){
     const diet = a.diet;
     const sys=`You are the Marigold Inquiry Drafter.\nABSOLUTE RULES:\n1. DIETARY SAFETY \u2014 vendor certification: "${diet}". Kosher: NEVER mention pork, shellfish, or mixing meat/dairy. Halal: NEVER mention pork or alcohol. Zero exceptions.\n2. Maximum 160 words.\n3. Always include a price-lock question.\n4. One specific genuine detail about the vendor. Not flattery \u2014 specificity.\n5. Include event name, date, guest count, need, budget.\n6. Never open with "I hope this email finds you well."\n7. End with: [Review before sending \u2014 personalise the opening and confirm all details]\nAfter draft add:\nCultural details included: (one line)\nTariff note: (if relevant, otherwise omit)`;
@@ -1103,7 +1121,7 @@ After draft: Cultural context included: (one line)`;
 }
 
 /* ============ ACCOUNT: SAVE / LOAD BY EMAIL ============ */
-const AUTH = { email: null, lastSavedAt: null };
+const AUTH = { email: null, lastSavedAt: null, pendingSnapshot: null };
 
 function getRememberedEmail(){
   try { return localStorage.getItem('marigold-email') || null; }
@@ -1171,10 +1189,10 @@ async function attemptLogin(email, fromRemembered){
     AUTH.email = email;
     rememberEmail(email);
     if(d.found){
-      restoreFromSnapshot(d.data);
       AUTH.lastSavedAt = d.savedAt;
+      AUTH.pendingSnapshot = d.data; // not restored yet \u2014 wait for the person to choose
       renderAccountBar();
-      goTab('cie', 1, document.querySelectorAll('.tab')[1]);
+      showSavedPlanChoice(d.data, d.savedAt);
     } else if(W.ready){
       // No saved record yet, but they already have in-progress work this session \u2014 save it now rather than losing the chance.
       await saveCurrentPlan(true);
@@ -1194,6 +1212,78 @@ async function attemptLogin(email, fromRemembered){
   }
 }
 
+function showSavedPlanChoice(snap, savedAt){
+  const card = document.getElementById('qc-intro');
+  goTab('intro', 0, document.querySelectorAll('.tab')[0]);
+  const names = (snap && snap.W && snap.W.p1) ? (snap.W.p1+' & '+snap.W.p2) : 'your couple';
+  const savedLabel = savedAt ? new Date(savedAt).toLocaleString([], {dateStyle:'medium', timeStyle:'short'}) : 'earlier';
+  card.innerHTML =
+    '<div class="ql">Welcome back</div>'+
+    '<div class="qt">We found a saved plan for '+names+'.</div>'+
+    '<div class="qs">Saved '+savedLabel+'. What would you like to do?</div>'+
+    '<div class="choice-cards">'+
+      '<button class="choice-card" onclick="loadSavedPlan()">'+
+        '<div class="cc-title">Continue this plan</div>'+
+        '<div class="cc-sub">Pick up right where you left off, with everything you\u2019ve already generated.</div>'+
+      '</button>'+
+      '<button class="choice-card" onclick="startFreshOverSaved()">'+
+        '<div class="cc-title">Start a new plan</div>'+
+        '<div class="cc-sub">Begin from scratch. Your saved plan stays put until you choose to replace it.</div>'+
+      '</button>'+
+    '</div>'+
+    '<button class="account-link" id="delete-plan-link" onclick="confirmDeleteSavedPlan()" style="margin-top:18px;color:#a04a1a">Delete this saved plan</button>'+
+    '<div id="delete-status" style="font-size:12px;color:var(--muted);font-style:italic;margin-top:10px"></div>';
+}
+
+function loadSavedPlan(){
+  if(!AUTH.pendingSnapshot) return;
+  restoreFromSnapshot(AUTH.pendingSnapshot);
+  AUTH.pendingSnapshot = null;
+  goTab('cie', 1, document.querySelectorAll('.tab')[1]);
+}
+
+function startFreshOverSaved(){
+  // Keep AUTH.email signed in and the saved record untouched on the server \u2014
+  // just don't load it into the current session. A future save (after they
+  // generate something new) will overwrite it, same as any other save.
+  AUTH.pendingSnapshot = null;
+  renderIntro();
+}
+
+function confirmDeleteSavedPlan(){
+  const statusEl = document.getElementById('delete-status');
+  const linkEl = document.getElementById('delete-plan-link');
+  if(linkEl && linkEl.dataset.confirming !== '1'){
+    linkEl.dataset.confirming = '1';
+    linkEl.textContent = 'Click again to confirm delete \u2014 this can\u2019t be undone';
+    if(statusEl) statusEl.textContent = '';
+    return;
+  }
+  deleteSavedPlan();
+}
+
+async function deleteSavedPlan(){
+  const statusEl = document.getElementById('delete-status');
+  if(statusEl) statusEl.textContent = 'Deleting\u2026';
+  try{
+    const r = await fetch('/api/delete-plan', {
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({ email: AUTH.email })
+    });
+    const d = await r.json();
+    if(!r.ok || d.error) throw new Error((d.error&&d.error.message)||('Server responded with '+r.status));
+    AUTH.pendingSnapshot = null;
+    AUTH.lastSavedAt = null;
+    renderAccountBar();
+    if(statusEl) statusEl.textContent = '';
+    renderIntro();
+  }catch(e){
+    console.error('Marigold: delete failed', e);
+    if(statusEl) statusEl.textContent = 'Couldn\u2019t delete \u2014 '+e.message;
+  }
+}
+
 function renderAccountBar(errorMsg){
   const el = document.getElementById('account-bar');
   if(!el) return;
@@ -1206,8 +1296,26 @@ function renderAccountBar(errorMsg){
     : 'Signed in';
   el.innerHTML = '<span class="account-email">'+AUTH.email+'</span>'+
     '<span class="account-saved">'+savedLabel+'</span>'+
+    (AUTH.lastSavedAt ? '<button class="account-link" onclick="reviewSavedPlan()">view saved plan</button>' : '')+
     '<button class="account-link" onclick="forgetEmail();renderAccountBar();">sign out</button>'+
     (errorMsg ? '<span class="account-error">'+errorMsg+'</span>' : '');
+}
+
+async function reviewSavedPlan(){
+  if(!AUTH.email) return;
+  try{
+    const r = await fetch('/api/load-plan?email='+encodeURIComponent(AUTH.email));
+    const d = await r.json();
+    if(!r.ok || d.error) throw new Error((d.error&&d.error.message)||('Server responded with '+r.status));
+    if(d.found){
+      AUTH.pendingSnapshot = d.data;
+      AUTH.lastSavedAt = d.savedAt;
+      showSavedPlanChoice(d.data, d.savedAt);
+    }
+  }catch(e){
+    console.error('Marigold: review saved plan failed', e);
+    renderAccountBar('Couldn\u2019t check saved plan \u2014 '+e.message);
+  }
 }
 
 function showLoginForm(){
