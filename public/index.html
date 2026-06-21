@@ -1045,24 +1045,23 @@ RULES:
 7. Currency and cost calibration: if the wedding location is a "Destination" outside the US, all costs, budget tables, and vendor price ranges must reflect REALISTIC LOCAL costs for that country, not US pricing scaled down. For Destination \u2014 India specifically: quote in INR (with an approximate USD equivalent in parentheses), and use realistic Indian wedding market rates \u2014 a wedding that would cost $75,000 in the US could be a significantly different budget in India for comparable quality, depending on city tier and vendor caliber. Do not assume US dollar bucket ranges translate directly.
 8. Close with: "Confirm all ceremony details with your officiant and families before booking."
 
-FORMAT \u2014 hard limits, not suggestions. This must be genuinely short and fast to read:
-- Every paragraph-based section (overview, ceremony sequence, vendor priorities, decisions to align on) gets EXACTLY ONE summary line plus EXACTLY 2 short paragraphs of 2 sentences each. Never more. If you have more to say, cut it \u2014 do not add a third paragraph.
-- The summary line is the first line of the section, formatted exactly as: **In short:** then 2-3 short takeaways separated by semicolons, all on one line. Put it on its own line, immediately after the ## heading, before any paragraph.
-- Budget framework: a markdown table, max 8 rows.
-- Checklist: a flat bulleted list, max 8 items, one short line each.
+FORMAT \u2014 the priority order is: 1) don't lose any genuinely important point, 2) make it fast to scan. Never sacrifice #1 for #2.
+- Every section is a bulleted list, one line per distinct point \u2014 including Overview and Decisions to align on. There is no narrative prose anywhere in this output. As many bullets as the couple's traditions and complexity genuinely call for (don't cap arbitrarily; a multi-day interfaith wedding may need 6-10 ceremony events, not 2). Each bullet is a real, specific, complete point on its own \u2014 not a fragment that needs the others around it to make sense.
+- Budget framework: a markdown table, covering every category genuinely relevant to this couple, not capped at a fixed number.
+- EVERY section opens with one summary line, immediately after the ## heading, before the bullets: **In short:** then 2-4 of the single most important takeaways from THAT section's actual content, separated by semicolons. This must reflect real specifics from the bullets below it (e.g. an actual event name, an actual vendor category, an actual number) \u2014 never a generic placeholder like "key details below."
 
 SECTIONS \u2014 include what's relevant, in this order:
-## Overview
+## Overview (bulleted list \u2014 the handful of most important facts about this wedding: traditions, size, location, what makes it distinctive)
 ## Budget framework (markdown table, currency calibrated per rule 7 above)
-## Ceremony sequence
-## Vendor priorities
-## Decisions to align on (only if something genuinely applies, per rule 6 \u2014 omit entirely otherwise)
+## Ceremony sequence (bulleted list \u2014 include every distinct ceremony or event, don't compress multiple events into one bullet)
+## Vendor priorities (bulleted list \u2014 which vendors to book first and why, in priority order, one per bullet)
+## Decisions to align on (bulleted list, only if something genuinely applies, per rule 6 \u2014 omit entirely otherwise)
 ## Checklist (bulleted list)
 
 If FOCUS below asks for only one of these sections, output only that section in full \u2014 do not include the others at all. Use **bold** only for the "In short:" line and key numbers/dates.
 
-Tone: plain and direct. If you're unsure whether to include something, leave it out \u2014 the limits above are hard caps, not targets to fill.`;
-    ask(sys, ctx()+'\n\nFOCUS: '+a.focus+'\n\nGenerate the wedding plan.', 'cie-res','cie-out','run-cie','Generate my plan', {checklistMode:true, idPrefix:'cie'}, 'cie', 2200, null, focusKey);
+Tone: plain and direct, but complete \u2014 a couple should never have to guess at something you left out to save space.`;
+    ask(sys, ctx()+'\n\nFOCUS: '+a.focus+'\n\nGenerate the wedding plan.', 'cie-res','cie-out','run-cie','Generate my plan', {checklistMode:true, idPrefix:'cie'}, 'cie', 4500, null, focusKey);
   } else if(flow==='vendor'){
     if(a.source === 'bring my own'){
       runByoInvite(a);
@@ -1084,12 +1083,14 @@ RULES:
 5. Flag tariff risks for imported florals, specialty ingredients, textiles.
 6. Currency calibration: if the wedding location is a destination outside the US, all pricing in "Budget reality check" must reflect REALISTIC LOCAL market costs, not US pricing scaled down. For Destination \u2014 India specifically: quote in INR with an approximate USD equivalent in parentheses, using realistic Indian vendor rates for this category and the couple's stated tier \u2014 do not assume US dollar bucket ranges translate directly.
 
-FORMAT \u2014 hard limits, not suggestions:
-- "What to look for" and "Where to find more": EXACTLY ONE summary line plus EXACTLY 1 short paragraph of 2 sentences. Never more.
-- The summary line goes first, right after the ## heading, formatted exactly as: **In short:** then 2-3 short takeaways separated by semicolons, on one line.
-- "Vendors to consider": a short list, max 4 entries, each just a name plus one short sentence.
-- "Questions to ask": a bulleted list, max 4 items.
-- "Budget reality check": EXACTLY ONE summary line (**In short:** plus the key number) plus EXACTLY 1 short sentence after it. Nothing more.
+FORMAT \u2014 the priority order is: 1) don't lose any genuinely useful point, 2) make it fast to scan.
+- Every section is a bulleted list, one line per distinct point \u2014 no narrative prose anywhere.
+- "What to look for": bulleted list of the real things to evaluate for this vendor category and budget \u2014 as many as genuinely matter.
+- "Vendors to consider": a bulleted list, one vendor per bullet, name plus a real specific reason \u2014 include as many as genuinely fit the category and budget, not a fixed count.
+- "Where to find more": bulleted list of concrete places/resources to search, not a paragraph.
+- "Questions to ask": a bulleted list, one question per bullet, cover the real questions that matter for this vendor category.
+- "Budget reality check": bulleted list of concrete numbers and what they cover, currency calibrated per rule 6 above.
+- EVERY section opens with one summary line right after the ## heading: **In short:** then 2-3 of the single most useful takeaways from that section's actual content, separated by semicolons \u2014 real specifics, not placeholders.
 
 ## What to look for
 ## Vendors to consider
@@ -1097,8 +1098,8 @@ FORMAT \u2014 hard limits, not suggestions:
 ## Questions to ask
 ## Budget reality check
 
-Use **bold** only for the "In short:" line, vendor names, or key numbers. If unsure whether to include something, leave it out.`;
-    ask(sys, ctx()+'\n\nVENDOR: '+a.cat+'\nBUDGET: '+a.bud+'\nEVENT DATE: '+a.date, 'vm-res','vm-out','run-vendor','Find vendors', null, 'vendor', 900);
+Use **bold** only for the "In short:" line, vendor names, or key numbers. Be complete \u2014 don't cut a real, useful point just to look shorter.`;
+    ask(sys, ctx()+'\n\nVENDOR: '+a.cat+'\nBUDGET: '+a.bud+'\nEVENT DATE: '+a.date, 'vm-res','vm-out','run-vendor','Find vendors', null, 'vendor', 1600);
   } else if(flow==='inquiry'){
     const diet = a.diet;
     const sys=`You are the Marigold Inquiry Drafter.\nABSOLUTE RULES:\n1. DIETARY SAFETY \u2014 vendor certification: "${diet}". Kosher: NEVER mention pork, shellfish, or mixing meat/dairy. Halal: NEVER mention pork or alcohol. Zero exceptions.\n2. Maximum 160 words.\n3. Always include a price-lock question.\n4. One specific genuine detail about the vendor. Not flattery \u2014 specificity.\n5. Include event name, date, guest count, need, budget.\n6. Never open with "I hope this email finds you well."\n7. End with: [Review before sending \u2014 personalise the opening and confirm all details]\nAfter draft add:\nCultural details included: (one line)\nTariff note: (if relevant, otherwise omit)`;
